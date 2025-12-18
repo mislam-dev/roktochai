@@ -5,6 +5,15 @@ networks:
   app-network:
     driver: bridge
 services:
+  dashboard:
+    build:
+      context: ./apps/dashboard
+      dockerfile: Dockerfile
+    container_name: rokto_chai_dashboard
+    ports:
+      - 3000:80
+    depends_on:
+      - api
   api:
     build:
       context: ./apps/backend
