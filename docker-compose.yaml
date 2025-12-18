@@ -1,0 +1,28 @@
+volumes:
+  mongodb_data:
+
+networks:
+  app-network:
+    driver: bridge
+services:
+  api:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: rokto_chai_api
+    env_file:
+      - ./apps/backend/.env
+    environment:
+      DATABASE_URL: mongodb://database_mongo:27017/projectb
+    depends_on:
+      - database_mongo
+    ports:
+      - 9000:9000
+
+  database_mongo:
+    container_name: mongodb
+    image: mongo:6-jammy
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
