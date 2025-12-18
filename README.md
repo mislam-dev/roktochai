@@ -22,13 +22,6 @@ Monitor the complete donation journey, access real-time analytics, and understan
 - Community impact statistics
 - Mobile-responsive design
 
-
-# Project Monorepo
-This monorepo contains all the components of the of this project project:
-
-- Backend API Service
-- Admin Dashboard
-
 ## Project Structure
 
 ```
@@ -38,38 +31,6 @@ This monorepo contains all the components of the of this project project:
 └── README.md
 ```
 
-## Setup
+## Setup & Installations
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Start development servers:
-   ```bash
-   npm run dev
-   ```
-
-3. Build all packages:
-   ```bash
-   npm run build
-   ```
-
-## Available Scripts
-
-- `docker-compose -f docker/docker-compose.yaml up -d` - Run database with dokcer-compose
-- `npm run dev` - Start all projects in development mode
-- `npm run build` - Build all projects
-- `npm run start` - Start all projects in production mode
-- `npm run lint` - Run linting across all projects
-- `npm run lint` - Run linting across all projects
-
-
-## Package-specific Commands
-
-You can run commands for specific packages using the workspace syntax:
-
-```bash
-npm run dev -w @roktochai/backend
-npm run dev -w @roktochai/dashboard
-```
+- `docker-compose up -d` - Run the whole project with de-attached mode
