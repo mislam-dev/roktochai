@@ -10,6 +10,8 @@ services:
       context: ./apps/dashboard
       dockerfile: Dockerfile
     container_name: rokto_chai_dashboard
+    volumes:
+      - ./apps/dashboard/build:/usr/share/nginx/html:ro
     ports:
       - 3000:80
     depends_on:
@@ -23,6 +25,9 @@ services:
       - ./apps/backend/.env
     environment:
       DATABASE_URL: mongodb://database_mongo:27017/projectb
+    volumes:
+      - ./apps/backend:/app
+      - /app/node_modules
     depends_on:
       - database_mongo
     ports:
