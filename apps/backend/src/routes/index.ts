@@ -1,7 +1,7 @@
 import { Express, Request, Response } from "express";
-import donationActivityRouter from "../DonationActivity/donationActivityRouter";
 import donationRequestRouter from "../DonationRequest/donationRequestRouter";
 import notificationRouter from "../Notifications/notificationRouter";
+import activityRouter from "../activity/activity.routes";
 import authRouter from "../auth/authRouter";
 import featuredRouter from "../featured/featuredRouter";
 import userRouter from "../user/userRouter";
@@ -25,7 +25,7 @@ const routeArrays = [
   },
   {
     path: "/api/v1/donation/activity",
-    handler: donationActivityRouter,
+    handler: activityRouter,
   },
   {
     path: "/api/v1/notification",
