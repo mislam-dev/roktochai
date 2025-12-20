@@ -4,7 +4,7 @@ import donationRequestRouter from "../DonationRequest/donation-request.routes";
 import notificationRouter from "../Notifications/notificationRouter";
 import activityRouter from "../activity/activity.routes";
 import authRouter from "../auth/auth.routes";
-import featuredRouter from "../featured/featuredRouter";
+import featuredRouter from "../featured/featured.routes";
 import userRouter from "../user/userRouter";
 
 const routeArrays = [
