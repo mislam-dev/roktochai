@@ -1,8 +1,8 @@
 import { blood_type, Prisma } from "@prisma/client";
 import { prisma } from "../core/database";
 import generateUsername from "../helpers/generateUsername";
-import { PasswordHash } from "./auth.helper";
-import { generateToken } from "./authHelpers";
+import { PasswordHash } from "./helpers/password-hash.helper";
+import { Token } from "./helpers/token.helper";
 
 export type UserCreateDTO = {
   firstName: any;
@@ -47,7 +47,7 @@ export class AuthService {
       return;
     }
 
-    const token = generateToken(findUser);
+    const token = Token.generate(findUser);
 
     return token;
   }

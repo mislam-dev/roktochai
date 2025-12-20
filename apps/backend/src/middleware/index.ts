@@ -2,7 +2,10 @@ import cors from "cors";
 import express, { Express } from "express";
 import morgan from "morgan";
 import passport from "passport";
-import authMiddleware from "../auth/authMiddleware";
+
+import { AuthMiddleware } from "../auth/auth.middleware";
+
+const authMiddleware = new AuthMiddleware();
 
 const middleware = [
   cors({
@@ -21,7 +24,7 @@ const setUpMiddleware = (app: Express) => {
 
   app.use(passport.initialize());
 
-  authMiddleware(passport);
+  authMiddleware.init(passport);
 };
 
 export default setUpMiddleware;

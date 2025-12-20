@@ -13,22 +13,23 @@ export const BLOOD_GROUPS: blood_type[] = [
   "O_NEGATIVE",
 ];
 
-interface TokenUserDataProps {
+type TokenData = {
   id: string;
   email: string;
   username: string;
-}
-
-export const generateToken = (user: TokenUserDataProps): string => {
-  const token = jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      iat: new Date().getTime(),
-      exp: Date.now() + 1000 * 60 * 60,
-    },
-    JWT_SECRET ? JWT_SECRET : ""
-  );
-  return token;
 };
+export class Token {
+  static generate(data: TokenData) {
+    const token = jwt.sign(
+      {
+        id: data.id,
+        email: data.email,
+        username: data.username,
+        iat: new Date().getTime(),
+        exp: Date.now() + 1000 * 60 * 60,
+      },
+      JWT_SECRET ? JWT_SECRET : ""
+    );
+    return token;
+  }
+}

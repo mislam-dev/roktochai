@@ -2,7 +2,7 @@ import { Express, Request, Response } from "express";
 import donationRequestRouter from "../DonationRequest/donationRequestRouter";
 import notificationRouter from "../Notifications/notificationRouter";
 import activityRouter from "../activity/activity.routes";
-import authRouter from "../auth/authRouter";
+import authRouter from "../auth/auth.routes";
 import featuredRouter from "../featured/featuredRouter";
 import userRouter from "../user/userRouter";
 
