@@ -1,5 +1,7 @@
 import { NextFunction, Request, Response } from "express";
+import { HttpException, NotFoundException } from "../core/errors";
 import { AuthService, UserCreateDTO } from "./auth.service";
+import { SignInDto } from "./dtos/sign-in.dto";
 
 interface UpdatePasswordRequestBody {
   password: string;
@@ -11,12 +13,7 @@ export class AuthController {
 
   async signIn(req: Request, res: Response, next: NextFunction) {
     try {
-      interface RequestBodyTypes {
-        username: string;
-        password: string;
-      }
-
-      const { username, password }: RequestBodyTypes = req.body;
+      const { username, password }: SignInDto = req.body;
 
       const token = this.authService.signIn(username, password);
 
@@ -83,13 +80,7 @@ export class AuthController {
 
     try {
       const userData = await this.authService.findOne({ id: user.id });
-      if (!userData) {
-        // todo throw new error
-        return res.status(404).json({
-          message: "Data not found!",
-          data: {},
-        });
-      }
+      if (!userData) throw new NotFoundException();
       return res.status(200).json({
         message: "User found!",
         data: userData,
@@ -152,13 +143,7 @@ export class AuthController {
 
       const data = await this.authService.findOtpRecord(verificationId);
 
-      if (!data) {
-        // todo throw new error
-        return res.status(400).json({
-          message: "Verification failed",
-          data: null,
-        });
-      }
+      if (!data) throw new HttpException("Verification failed", 400);
 
       return res.status(200).json({
         message: "Verification successfully!",

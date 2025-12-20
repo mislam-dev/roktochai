@@ -19,9 +19,14 @@ export interface ErrorField {
   message: string[];
 }
 
+type RawError = {
+  property: string;
+  constraints: string[];
+};
+
 export class ValidationException extends HttpException {
   public errors: ErrorField[];
-  constructor(rawErrors: any[]) {
+  constructor(rawErrors: RawError[]) {
     super("Validation failed", 400);
     this.errors = rawErrors.map((err) => ({
       field: err.property,

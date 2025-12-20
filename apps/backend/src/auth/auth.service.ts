@@ -1,5 +1,11 @@
 import { blood_type, Prisma } from "@prisma/client";
 import { prisma } from "../core/database";
+import {
+  HttpException,
+  InternalServerException,
+  NotFoundException,
+  ValidationException,
+} from "../core/errors";
 import generateUsername from "../helpers/generateUsername";
 import { PasswordHash } from "./helpers/password-hash.helper";
 import { Token } from "./helpers/token.helper";
@@ -26,30 +32,23 @@ export class AuthService {
       OR: [{ username }, { email: username }],
     });
 
-    if (!findUser) {
-      // todo throw new error
-      // return res.status(400).json(errorMessage);
-      return;
-    }
+    const errorMessages = [
+      { property: "username", constraints: ["Invalid username!"] },
+      { property: "password", constraints: ["Invalid password!"] },
+    ];
+
+    if (!findUser) throw new ValidationException(errorMessages);
 
     const isPasswordOk = this.hash.verify(password, findUser.password);
 
-    if (!isPasswordOk) {
-      // todo throw new error
-      // return res.status(400).json(errorMessage);
-      return;
-    }
-    if (!findUser.isVerified) {
-      // return res.status(406).json({
-      //   message:
-      //     "You account is not yet activated! We will let you know when it activated!",
-      // });
-      return;
-    }
+    if (!isPasswordOk) throw new ValidationException(errorMessages);
+    if (!findUser.isVerified)
+      throw new HttpException(
+        "You account is not yet activated! We will let you know when it activated!",
+        406
+      );
 
-    const token = Token.generate(findUser);
-
-    return token;
+    return Token.generate(findUser);
   }
   async create_user(values: UserCreateDTO) {
     const { firstName, lastName, email, blood, password } = values;
@@ -57,10 +56,7 @@ export class AuthService {
     const hash = this.hash.hash(password);
 
     const role = await this.role.findUnique({ where: { role: "user" } });
-    if (!role) {
-      // return res.status(500).json({ message: "Internal server error" });
-      return;
-    }
+    if (!role) throw new InternalServerException();
 
     let username = await this.getRandomUniqueUsername(firstName, lastName);
 
@@ -105,29 +101,25 @@ export class AuthService {
   }
 
   async updatePassword(password: string, newPassword: string, userId: string) {
-    // Find the user in the database
     const findUser = await this.findOne({ id: userId });
 
-    if (!findUser) {
-      // return res.status(404).json({ password: "Password is incorrect!" });
-      return;
-    }
-
-    // Check if the current password is correct
+    if (!findUser) throw new NotFoundException();
     const isPasswordOk = this.hash.verify(password, findUser.password);
     if (!isPasswordOk) {
-      // return res.status(400).json({ password: "Password is incorrect!" });
-      return;
+      throw new ValidationException([
+        {
+          property: "password",
+          constraints: ["Password is incorrect!"],
+        },
+      ]);
     }
 
     const hashedNewPassword = this.hash.hash(newPassword);
 
-    // Update the user's password in the database
-    const user = await this.user.update({
+    return this.user.update({
       where: { id: userId },
       data: { password: hashedNewPassword },
     });
-    return user;
   }
 
   // private methods
@@ -176,10 +168,7 @@ export class AuthService {
       where: { verificationId },
     });
 
-    if (!otpRecord) {
-      // return res.status(406).json({ message: "Password update failed" });
-      return;
-    }
+    if (!otpRecord) throw new NotFoundException();
 
     const hashedNewPassword = this.hash.hash(newPassword);
 

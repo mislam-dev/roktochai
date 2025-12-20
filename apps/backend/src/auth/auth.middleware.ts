@@ -2,6 +2,7 @@ import { ExtractJwt, Strategy, StrategyOptions } from "passport-jwt";
 
 import { NextFunction, Request, Response } from "express";
 import passport, { PassportStatic } from "passport";
+import { UnauthorizedException } from "../core/errors";
 import { AuthService } from "./auth.service";
 
 export class AuthMiddleware {
@@ -36,12 +37,7 @@ export class AuthMiddleware {
         console.log(info); // todo remove later
         return next(err);
       }
-      if (!user) {
-        // todo throw  a custom class
-        return res.status(401).json({
-          message: "Authentication failed!",
-        });
-      }
+      if (!user) throw new UnauthorizedException();
       req.user = user;
       return next();
     })(req, res, next);
@@ -61,11 +57,7 @@ export class AuthMiddleware {
       if (role === "admin" || role === "super_admin") {
         return next();
       }
-      // todo throw custom error
-      return res.status(401).json({
-        message: "You are not authorize to perform this action!",
-        data: null,
-      });
+      throw new UnauthorizedException();
     } catch (error) {
       next(error);
     }
@@ -73,11 +65,7 @@ export class AuthMiddleware {
   async isSuperAdmin(req: Request<any>, res: Response, next: NextFunction) {
     try {
       if ((req as any).user?.role.role === "super_admin") return next();
-      // todo throw custom error
-      return res.status(401).json({
-        message: "You are not authorize to perform this action!",
-        data: null,
-      });
+      throw new UnauthorizedException();
     } catch (error) {
       next(error);
     }
