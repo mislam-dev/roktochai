@@ -1,6 +1,9 @@
 import express, { Router } from "express";
-import { authenticate } from "../auth/authMiddleware";
-import { all, remove, single } from "./donationActivityController";
+import { AuthMiddleware } from "../auth/auth.middleware";
+import { DonationActivityController } from "./donation-activity.controller";
+
+const { all, single, remove } = new DonationActivityController();
+const { authenticate } = new AuthMiddleware();
 
 const donationActivityRouter: Router = express.Router();
 donationActivityRouter.get("/", authenticate, all);
