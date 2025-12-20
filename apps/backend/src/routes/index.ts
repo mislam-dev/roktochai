@@ -1,6 +1,6 @@
 import { Express, Request, Response } from "express";
 import donationActivityRouter from "../DonationActivity/donation-activity.routes";
-import donationRequestRouter from "../DonationRequest/donationRequestRouter";
+import donationRequestRouter from "../DonationRequest/donation-request.routes";
 import notificationRouter from "../Notifications/notificationRouter";
 import activityRouter from "../activity/activity.routes";
 import authRouter from "../auth/auth.routes";

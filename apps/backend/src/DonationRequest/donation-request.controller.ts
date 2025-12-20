@@ -18,9 +18,6 @@ interface CreateReqBody {
   emailUserId: string;
 }
 
-interface CompleteReqBody {
-  donor: string;
-}
 interface AssignReqBody {
   donor: string;
 }
