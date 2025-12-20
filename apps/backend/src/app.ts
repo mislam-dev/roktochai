@@ -2,6 +2,18 @@ import express, { Express } from "express";
 import setUpMiddleware from "./middleware";
 import setRoutes from "./routes";
 
+declare global {
+  namespace Express {
+    interface Request {
+      User?: {
+        id: string;
+        username?: string;
+        roleId: string;
+      };
+    }
+  }
+}
+
 const app: Express = express();
 
 setUpMiddleware(app);
