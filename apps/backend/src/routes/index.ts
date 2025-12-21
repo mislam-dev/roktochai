@@ -4,17 +4,13 @@ import donationRequestRouter from "../DonationRequest/donation-request.routes";
 import notificationRouter from "../Notifications/notification.routes";
 import activityRouter from "../activity/activity.routes";
 import authRouter from "../auth/auth.routes";
-import featuredRouter from "../featured/featured.routes";
 
 const routeArrays = [
   {
     path: "/api/v1/auth",
     handler: authRouter,
   },
-  {
-    path: "/api/v1/featured",
-    handler: featuredRouter,
-  },
+
   {
     path: "/api/v1/activity",
     handler: activityRouter,

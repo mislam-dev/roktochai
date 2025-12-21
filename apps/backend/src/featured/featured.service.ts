@@ -1,9 +1,12 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "../core/database"; // Ensure this matches your project setup
+import { autoInjectable, inject } from "tsyringe";
+import { DB_FEATURED_TOKEN } from "../core/database/token";
 
+@autoInjectable()
 export class FeaturedService {
   constructor(
-    private readonly featured: Prisma.FeaturedDelegate = prisma.featured
+    @inject(DB_FEATURED_TOKEN)
+    private readonly featured: Prisma.FeaturedDelegate
   ) {}
 
   async findAll() {

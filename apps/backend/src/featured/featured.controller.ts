@@ -1,12 +1,22 @@
 import { NextFunction, Request, Response } from "express";
+import { autoInjectable } from "tsyringe";
+import { AuthMiddleware } from "../auth/auth.middleware";
+import { Controller } from "../core/decorator/controller.decorator";
+import { UseDTO } from "../core/decorator/dto.decorator";
+import { Use } from "../core/decorator/middleware.decorator";
+import { DELETE, GET, PATCH, POST } from "../core/decorator/routes.decorator";
+import { CreateRequestDto } from "./dtos/create-featured.dto";
+import { UpdateFeaturedDto } from "./dtos/update-featured.dto";
 import { FeaturedService } from "./featured.service";
 
+@autoInjectable()
+@Controller("/api/v1/featured")
+@Use(AuthMiddleware.authenticate)
 export class FeaturedController {
-  constructor(
-    private readonly featuredService: FeaturedService = new FeaturedService()
-  ) {}
+  constructor(private readonly featuredService: FeaturedService) {}
 
-  all = async (req: Request, res: Response, next: NextFunction) => {
+  @GET("/")
+  async all(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await this.featuredService.findAll();
       return res.status(200).json({
@@ -16,13 +26,14 @@ export class FeaturedController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
-  single = async (
+  @GET("/:id")
+  async single(
     req: Request<{ id: string }>,
     res: Response,
     next: NextFunction
-  ) => {
+  ) {
     try {
       const data = await this.featuredService.findOne(req.params.id);
       return res.status(200).json({
@@ -32,9 +43,11 @@ export class FeaturedController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
-  create = async (req: Request, res: Response, next: NextFunction) => {
+  @POST("/")
+  @UseDTO(CreateRequestDto)
+  async create(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await this.featuredService.create(req.body);
       return res.status(201).json({
@@ -44,13 +57,15 @@ export class FeaturedController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
-  update = async (
+  @PATCH("/:id")
+  @UseDTO(UpdateFeaturedDto)
+  async update(
     req: Request<{ id: string }>,
     res: Response,
     next: NextFunction
-  ) => {
+  ) {
     try {
       const data = await this.featuredService.update(req.params.id, req.body);
       return res.status(200).json({
@@ -60,13 +75,14 @@ export class FeaturedController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
-  remove = async (
+  @DELETE("/")
+  async remove(
     req: Request<{ id: string }>,
     res: Response,
     next: NextFunction
-  ) => {
+  ) {
     try {
       await this.featuredService.softDelete(req.params.id);
       return res.status(204).json({
@@ -76,5 +92,5 @@ export class FeaturedController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 }
