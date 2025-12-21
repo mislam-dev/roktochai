@@ -1,6 +1,15 @@
 import { blood_type, donation_status } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
+import { autoInjectable } from "tsyringe";
+import { AuthMiddleware } from "../auth/auth.middleware";
+import { Controller } from "../core/decorator/controller.decorator";
+import { UseDTO } from "../core/decorator/dto.decorator";
+import { Use } from "../core/decorator/middleware.decorator";
+import { DELETE, GET, POST, PUT } from "../core/decorator/routes.decorator";
 import { DonationRequestService } from "./donation-request.service";
+import { AssignDonorDto } from "./dtos/asign-donor.dto";
+import { CreateRequestDto } from "./dtos/create.dto";
+import { FinderDonorDto } from "./dtos/find-donor.dto";
 
 interface AllReqQuery {
   status?: donation_status;
@@ -21,11 +30,13 @@ interface CreateReqBody {
 interface AssignReqBody {
   donor: string;
 }
+@autoInjectable()
+@Controller("/api/v1/donation/requested")
+@Use(AuthMiddleware.authenticate)
 export class DonationRequestController {
-  constructor(
-    private readonly drService: DonationRequestService = new DonationRequestService()
-  ) {}
+  constructor(private readonly drService: DonationRequestService) {}
 
+  @GET("/")
   async all(
     req: Request<{}, {}, {}, AllReqQuery>,
     res: Response,
@@ -44,11 +55,14 @@ export class DonationRequestController {
       next(error);
     }
   }
-  create = async (
+
+  @POST("/")
+  @UseDTO(CreateRequestDto)
+  async create(
     req: Request<{}, {}, CreateReqBody>,
     res: Response,
     next: NextFunction
-  ) => {
+  ) {
     try {
       const item = await this.drService.createRequest(req.body, req.user);
 
@@ -60,8 +74,9 @@ export class DonationRequestController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
+  @GET("/:id")
   async single(
     req: Request<{ id: string }>,
     res: Response,
@@ -81,6 +96,8 @@ export class DonationRequestController {
     }
   }
 
+  @PUT("/approve/:id")
+  @Use(AuthMiddleware.isAdmin)
   async approve(
     req: Request<{ id: string }>,
     res: Response,
@@ -98,6 +115,8 @@ export class DonationRequestController {
     }
   }
 
+  @PUT("/complete/:id")
+  @Use(AuthMiddleware.isAdmin)
   async complete(
     req: Request<{ id: string }>,
     res: Response,
@@ -115,6 +134,8 @@ export class DonationRequestController {
     }
   }
 
+  @PUT("/decline/:id")
+  @Use(AuthMiddleware.isAdmin)
   async decline(
     req: Request<{ id: string }, {}, {}>,
     res: Response,
@@ -131,6 +152,8 @@ export class DonationRequestController {
       next(error);
     }
   }
+  @PUT("/progress/:id")
+  @Use(AuthMiddleware.isAdmin)
   async progress(
     req: Request<{ id: string }>,
     res: Response,
@@ -148,6 +171,9 @@ export class DonationRequestController {
     }
   }
 
+  @PUT("/assign/:id")
+  @Use(AuthMiddleware.isAdmin)
+  @UseDTO(AssignDonorDto)
   async assign(
     req: Request<{ id: string }, {}, AssignReqBody>,
     res: Response,
@@ -169,6 +195,8 @@ export class DonationRequestController {
     }
   }
 
+  @PUT("/hold/:id")
+  @Use(AuthMiddleware.isAdmin)
   async hold(req: Request<{ id: string }>, res: Response, next: NextFunction) {
     try {
       await this.drService.hold(req.params.id, req.user); //
@@ -182,6 +210,8 @@ export class DonationRequestController {
     }
   }
 
+  @DELETE("/:id")
+  @Use(AuthMiddleware.isSuperAdmin)
   async remove(
     req: Request<{ id: string }>,
     res: Response,
@@ -199,11 +229,14 @@ export class DonationRequestController {
     }
   }
 
-  findDonor = async (
+  @POST("/find-donor")
+  @Use(AuthMiddleware.isAdmin)
+  @UseDTO(FinderDonorDto)
+  async findDonor(
     req: Request<{}, {}, FindReqBody>,
     res: Response,
     next: NextFunction
-  ) => {
+  ) {
     try {
       const { date, blood } = req.body;
       const donors = await this.drService.findAvailableDonors(blood, date);
@@ -215,13 +248,15 @@ export class DonationRequestController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
-  userContribution = async (
+  @GET("/contribution/:username")
+  @Use(AuthMiddleware.isAdmin)
+  async userContribution(
     req: Request<{ username: string }>,
     res: Response,
     next: NextFunction
-  ) => {
+  ) {
     try {
       const stats = await this.drService.getUserContributionStats(
         req.params.username
@@ -234,7 +269,7 @@ export class DonationRequestController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 }
 
 interface FindReqBody {

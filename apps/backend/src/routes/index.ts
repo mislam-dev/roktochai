@@ -1,6 +1,5 @@
 import { Express, Request, Response } from "express";
 import donationActivityRouter from "../DonationActivity/donation-activity.routes";
-import donationRequestRouter from "../DonationRequest/donation-request.routes";
 import notificationRouter from "../Notifications/notification.routes";
 import authRouter from "../auth/auth.routes";
 
@@ -8,10 +7,6 @@ const routeArrays = [
   {
     path: "/api/v1/auth",
     handler: authRouter,
-  },
-  {
-    path: "/api/v1/donation/requested",
-    handler: donationRequestRouter,
   },
   {
     path: "/api/v1/donation/activity",
