@@ -5,16 +5,11 @@ import notificationRouter from "../Notifications/notification.routes";
 import activityRouter from "../activity/activity.routes";
 import authRouter from "../auth/auth.routes";
 import featuredRouter from "../featured/featured.routes";
-import userRouter from "../user/user.routes";
 
 const routeArrays = [
   {
     path: "/api/v1/auth",
     handler: authRouter,
-  },
-  {
-    path: "/api/v1/user",
-    handler: userRouter,
   },
   {
     path: "/api/v1/featured",

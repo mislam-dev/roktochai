@@ -1,9 +1,20 @@
 import { NextFunction, Request, Response } from "express";
+import { autoInjectable } from "tsyringe";
+import { AuthMiddleware } from "../auth/auth.middleware";
+import { Controller } from "../core/decorator/controller.decorator";
+import { UseDTO } from "../core/decorator/dto.decorator";
+import { Use } from "../core/decorator/middleware.decorator";
+import { DELETE, GET, PATCH, POST } from "../core/decorator/routes.decorator";
+import { CreateUserDto, PromoteDemoteDto } from "./dtos/create-user.dto";
 import { UserService } from "./user.service";
 
+@autoInjectable()
+@Controller("/api/v1/users")
+@Use([AuthMiddleware.isAuthenticate, AuthMiddleware.isSuperAdmin])
 export class UserController {
-  constructor(private readonly userService: UserService = new UserService()) {}
+  constructor(private readonly userService: UserService) {}
 
+  @GET("/")
   async all(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await this.userService.findAll();
@@ -15,6 +26,8 @@ export class UserController {
     }
   }
 
+  @POST("/create")
+  @UseDTO(CreateUserDto)
   async create(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await this.userService.createUser(req.body);
@@ -26,6 +39,7 @@ export class UserController {
     }
   }
 
+  @GET("/single/:username")
   async single(
     req: Request<{ username: string }>,
     res: Response,
@@ -41,6 +55,46 @@ export class UserController {
     }
   }
 
+  async updateProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = (req.user as any).id;
+      await this.userService.updateProfile(userId, req.body);
+      res.status(200).json({ message: "Profile updated successfully!" });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  @GET("/roles")
+  async getRoles(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = await this.userService.getRoles();
+      res.status(200).json({ message: "Roles retrieved successfully", data });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  @PATCH("/verify/:username")
+  async verify(
+    req: Request<{ username: string }>,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const data = await this.userService.verifyUser(req.params.username);
+      res.status(200).json({
+        isSuccess: true,
+        message: "User verified Successfully!",
+        data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  @POST("/promote")
+  @UseDTO(PromoteDemoteDto)
   async promote(req: Request, res: Response, next: NextFunction) {
     try {
       const { findUserId, findUserRole } = req.body;
@@ -54,45 +108,9 @@ export class UserController {
     }
   }
 
-  async updateProfile(req: Request, res: Response, next: NextFunction) {
-    try {
-      const userId = (req.user as any).id;
-      await this.userService.updateProfile(userId, req.body);
-      res.status(200).json({ message: "Profile updated successfully!" });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  getRoles = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const data = await this.userService.getRoles();
-      res.status(200).json({ message: "Roles retrieved successfully", data });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  verify = async (
-    req: Request<{ username: string }>,
-    res: Response,
-    next: NextFunction
-  ) => {
-    try {
-      const data = await this.userService.verifyUser(req.params.username);
-      res
-        .status(200)
-        .json({
-          isSuccess: true,
-          message: "User verified Successfully!",
-          data,
-        });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  demote = async (req: Request, res: Response, next: NextFunction) => {
+  @POST("/demote")
+  @UseDTO(PromoteDemoteDto)
+  async demote(req: Request, res: Response, next: NextFunction) {
     try {
       const { findUserId, findUserRole } = req.body;
       const authUserId = (req.user as any).id;
@@ -103,13 +121,14 @@ export class UserController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
-  remove = async (
+  @DELETE("/remove/:username")
+  async remove(
     req: Request<{ username: string }>,
     res: Response,
     next: NextFunction
-  ) => {
+  ) {
     try {
       await this.userService.requestDeletion(req.params.username);
       res
@@ -118,13 +137,14 @@ export class UserController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
-  removeConfirm = async (
+  @DELETE("/remove/:username/confirm")
+  async removeConfirm(
     req: Request<{ username: string }>,
     res: Response,
     next: NextFunction
-  ) => {
+  ) {
     try {
       await this.userService.confirmDeletion(req.params.username);
       res
@@ -133,13 +153,14 @@ export class UserController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
-  update = async (
+  @PATCH("/single/:id")
+  async update(
     req: Request<{ id: string }>,
     res: Response,
     next: NextFunction
-  ) => {
+  ) {
     try {
       const data = await this.userService.updateUserInfo(
         req.params.id,
@@ -149,5 +170,5 @@ export class UserController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 }

@@ -1,6 +1,8 @@
 import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { autoInjectable, inject } from "tsyringe";
 import { prisma } from "../core/database";
+import { DB_USER_TOKEN } from "../core/database/token";
 import generateUsername from "../helpers/generateUsername";
 import {
   sendMailToAdminsForNewUser,
@@ -9,8 +11,11 @@ import {
 } from "./Mail";
 import { nextRoleName, prevRoleName, randomPassword } from "./user.helpers";
 
+@autoInjectable()
 export class UserService {
-  constructor(private readonly user: Prisma.UserDelegate = prisma.user) {}
+  constructor(
+    @inject(DB_USER_TOKEN) private readonly user: Prisma.UserDelegate
+  ) {}
   async findAll() {
     return this.user.findMany({
       where: { OR: [{ deleteAt: { isSet: false } }, { deleteAt: null }] },
@@ -98,7 +103,7 @@ export class UserService {
   }
 
   async verifyUser(username: string) {
-    const userData = await prisma.user.update({
+    const userData = await this.user.update({
       where: { username },
       data: { isVerified: true },
       include: { Profile: true },
@@ -115,7 +120,7 @@ export class UserService {
       where: { role: roleText },
     });
 
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await this.user.update({
       where: { id: findUserId },
       data: { roleId: targetRole?.id },
     });
@@ -132,7 +137,7 @@ export class UserService {
   }
 
   async requestDeletion(username: string) {
-    return prisma.user.updateMany({
+    return this.user.updateMany({
       where: {
         OR: [{ username }, { email: username }],
       },
@@ -141,7 +146,7 @@ export class UserService {
   }
 
   async confirmDeletion(username: string) {
-    return prisma.user.updateMany({
+    return this.user.updateMany({
       where: {
         OR: [{ username }, { email: username }],
       },
@@ -151,7 +156,7 @@ export class UserService {
 
   // Placeholder for future update logic
   async updateUserInfo(id: string, data: any) {
-    return prisma.user.update({
+    return this.user.update({
       where: { id },
       data,
     });

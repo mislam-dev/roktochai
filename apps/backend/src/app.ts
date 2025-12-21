@@ -7,6 +7,7 @@ import { container } from "tsyringe";
 import { AuthController } from "./auth/auth.controller";
 import { AuthMiddleware } from "./auth/auth.middleware";
 import { registerController } from "./core/controller/register-controller";
+import { UserController } from "./user/user.controller";
 
 export function createApp() {
   const app: Express = express();
@@ -25,7 +26,7 @@ export function createApp() {
 
   authMiddleware.init(passport);
 
-  registerController(app, [AuthController]);
+  registerController(app, [AuthController, UserController]);
 
   // setRoutes(app);
 
