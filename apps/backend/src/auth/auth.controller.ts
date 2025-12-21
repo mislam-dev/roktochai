@@ -1,5 +1,10 @@
 import { NextFunction, Request, Response } from "express";
+import { autoInjectable } from "tsyringe";
+import { Controller } from "../core/decorator/controller.decorator";
+import { Use } from "../core/decorator/middleware.decorator";
+import { GET, POST, PUT } from "../core/decorator/routes.decorator";
 import { HttpException, NotFoundException } from "../core/errors";
+import { AuthMiddleware } from "./auth.middleware";
 import { AuthService, UserCreateDTO } from "./auth.service";
 import { SignInDto } from "./dtos/sign-in.dto";
 
@@ -8,9 +13,13 @@ interface UpdatePasswordRequestBody {
   newPassword: string;
   confirmPassword: string;
 }
+
+@autoInjectable()
+@Controller("/api/v1/auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @POST("/sign-in")
   async signIn(req: Request, res: Response, next: NextFunction) {
     try {
       const { username, password }: SignInDto = req.body;
@@ -26,6 +35,7 @@ export class AuthController {
     }
   }
 
+  @POST("/sign-up")
   async signUp(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await this.authService.create_user(
@@ -42,7 +52,10 @@ export class AuthController {
     }
   }
 
+  @POST("/forgot-password")
   async forgotPassword(req: Request, res: Response, next: NextFunction) {}
+
+  @POST("/recover-password")
   async recoverAccount(req: Request, res: Response, next: NextFunction) {
     try {
       const user: any = req.user;
@@ -57,6 +70,8 @@ export class AuthController {
     }
   }
 
+  @Use(AuthMiddleware.authenticate)
+  @PUT("/update-password")
   async updatePassword(
     req: Request<{}, {}, UpdatePasswordRequestBody>,
     res: Response,
@@ -75,6 +90,9 @@ export class AuthController {
       next(error);
     }
   }
+
+  @POST("/me")
+  @Use(AuthMiddleware.authenticate)
   async me(req: Request, res: Response, next: NextFunction) {
     const user: any = req.user;
 
@@ -89,6 +107,9 @@ export class AuthController {
       next(error);
     }
   }
+
+  @PUT("/update-info")
+  @Use(AuthMiddleware.authenticate)
   async updateInfo(req: Request, res: Response, next: NextFunction) {
     try {
       const user: any = req.user;
@@ -103,6 +124,8 @@ export class AuthController {
       next(error);
     }
   }
+  @PUT("/update-profile")
+  @Use(AuthMiddleware.authenticate)
   async updateProfile(req: Request, res: Response, next: NextFunction) {
     try {
       const user: any = req.user;
@@ -123,6 +146,7 @@ export class AuthController {
       next(error);
     }
   }
+  @POST("/verify-otp")
   async verifyOtp(req: Request, res: Response, next: NextFunction) {
     try {
       const { otpRecordId }: any = req.body;
@@ -137,6 +161,7 @@ export class AuthController {
       next(error);
     }
   }
+  @GET("/verify-verification-id")
   async verifyVerificationId(req: Request, res: Response, next: NextFunction) {
     try {
       const { data: verificationId }: any = req.query;
@@ -153,6 +178,7 @@ export class AuthController {
       next(error);
     }
   }
+  @PUT("/set-password")
   async setNewPassword(req: Request, res: Response, next: NextFunction) {
     try {
       const { newPassword, verificationId } = req.body;

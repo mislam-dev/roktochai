@@ -2,6 +2,7 @@ import { Express, RequestHandler, Router } from "express";
 import { container } from "tsyringe";
 import {
   CONTROLLER_KEY,
+  CONTROLLER_MIDDLEWARE_KEY,
   MIDDLEWARE_KEY,
   ROUTE_KEY,
 } from "../decorator/decorators.key";
@@ -25,13 +26,14 @@ export function registerController(app: Express, controllers: Constructor[]) {
         ) as RouteDefinition[]) || [],
       middlewares:
         (Reflect.getMetadata(
-          MIDDLEWARE_KEY,
-          Controller.prototype
+          CONTROLLER_MIDDLEWARE_KEY,
+          Controller
         ) as RequestHandler[]) || [],
     };
+
     if (!controllerMetadata.basePath) {
       throw new Error(
-        `[registerController]: base is not defined for controller ${Controller.name}`
+        `[registerController]: basepath is not defined for controller ${Controller.name}`
       );
     }
     if (!controllerMetadata.routes.length) {
@@ -58,7 +60,8 @@ export function registerController(app: Express, controllers: Constructor[]) {
       const middlewares =
         (Reflect.getMetadata(
           MIDDLEWARE_KEY,
-          Controller.prototype
+          Controller.prototype,
+          route.methodName
         ) as RequestHandler[]) || [];
 
       const handler = (controllerInstance as any)[route.methodName].bind(

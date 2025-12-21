@@ -1,24 +1,33 @@
+import cors from "cors";
 import express, { Express } from "express";
+import morgan from "morgan";
+import passport from "passport";
 import "reflect-metadata";
-import setUpMiddleware from "./middleware";
-import setRoutes from "./routes";
-declare global {
-  namespace Express {
-    interface Request {
-      User?: {
-        id: string;
-        username?: string;
-        roleId: string;
-      };
-    }
-  }
+import { container } from "tsyringe";
+import { AuthController } from "./auth/auth.controller";
+import { AuthMiddleware } from "./auth/auth.middleware";
+import { registerController } from "./core/controller/register-controller";
+
+export function createApp() {
+  const app: Express = express();
+
+  app.use(
+    cors({
+      origin: true,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    })
+  );
+  app.use(morgan("dev"));
+  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json());
+
+  const authMiddleware = container.resolve(AuthMiddleware);
+
+  authMiddleware.init(passport);
+
+  registerController(app, [AuthController]);
+
+  // setRoutes(app);
+
+  return app;
 }
-
-const app: Express = express();
-
-setUpMiddleware(app);
-setRoutes(app);
-
-app.listen(9000, () => {
-  console.log("Server is running on port 9000");
-});

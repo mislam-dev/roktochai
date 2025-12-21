@@ -2,11 +2,13 @@ import { ExtractJwt, Strategy, StrategyOptions } from "passport-jwt";
 
 import { NextFunction, Request, Response } from "express";
 import passport, { PassportStatic } from "passport";
+import { injectable } from "tsyringe";
 import { UnauthorizedException } from "../core/errors";
 import { AuthService } from "./auth.service";
 
+@injectable()
 export class AuthMiddleware {
-  constructor(private readonly authService: AuthService = new AuthService()) {}
+  constructor(private readonly authService: AuthService) {}
 
   init(passport: PassportStatic) {
     const opts: StrategyOptions = {
@@ -30,7 +32,8 @@ export class AuthMiddleware {
     );
   }
 
-  authenticate(req: Request, res: Response, next: NextFunction) {
+  static authenticate(req: Request, res: Response, next: NextFunction) {
+    console.log("authenticate method");
     passport.authenticate("jwt", (err: any, user: any, info: any) => {
       if (err) {
         console.log(err); // todo remove later
@@ -43,7 +46,7 @@ export class AuthMiddleware {
     })(req, res, next);
   }
 
-  isAuthenticate(req: Request, res: Response, next: NextFunction) {
+  static isAuthenticate(req: Request, res: Response, next: NextFunction) {
     try {
       this.authenticate(req, res, next);
     } catch (error) {
@@ -51,7 +54,7 @@ export class AuthMiddleware {
     }
   }
 
-  async isAdmin(req: Request, res: Response, next: NextFunction) {
+  static async isAdmin(req: Request, res: Response, next: NextFunction) {
     try {
       const role = (req as any).user?.role.role;
       if (role === "admin" || role === "super_admin") {
@@ -62,7 +65,11 @@ export class AuthMiddleware {
       next(error);
     }
   }
-  async isSuperAdmin(req: Request<any>, res: Response, next: NextFunction) {
+  static async isSuperAdmin(
+    req: Request<any>,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       if ((req as any).user?.role.role === "super_admin") return next();
       throw new UnauthorizedException();

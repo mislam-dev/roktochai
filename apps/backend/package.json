@@ -4,7 +4,7 @@
   "private": true,
   "main": "server.js",
   "scripts": {
-    "start": "ts-node src/app.ts",
+    "start": "ts-node src/index.ts",
     "build": "prisma generate && tsc",
     "dev": "nodemon",
     "role:seed": "ts-node src/seeds/roleSeed.ts",

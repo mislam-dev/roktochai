@@ -1,5 +1,6 @@
-import { blood_type, Prisma } from "@prisma/client";
-import { prisma } from "../core/database";
+import { blood_type, Prisma, PrismaClient } from "@prisma/client";
+import { inject, injectable } from "tsyringe";
+import { DBClientToken } from "../core/database/token";
 import {
   HttpException,
   InternalServerException,
@@ -18,14 +19,22 @@ export type UserCreateDTO = {
   password: string;
 };
 
+@injectable()
 export class AuthService {
+  private readonly user: Prisma.UserDelegate;
+  private readonly profile: Prisma.ProfileDelegate;
+  private readonly otpRecords: Prisma.OtpRecordsDelegate;
+  private readonly role: Prisma.RoleDelegate;
   constructor(
-    private readonly hash: PasswordHash = new PasswordHash(),
-    private readonly user: Prisma.UserDelegate = prisma.user,
-    private readonly profile: Prisma.ProfileDelegate = prisma.profile,
-    private readonly otpRecords: Prisma.OtpRecordsDelegate = prisma.otpRecords,
-    private readonly role: Prisma.RoleDelegate = prisma.role
-  ) {}
+    private readonly hash: PasswordHash,
+    @inject(DBClientToken)
+    readonly prisma: PrismaClient
+  ) {
+    this.user = prisma.user;
+    this.profile = prisma.profile;
+    this.otpRecords = prisma.otpRecords;
+    this.role = prisma.role;
+  }
 
   async signIn(username: string, password: string) {
     const findUser = await this.findOne({
