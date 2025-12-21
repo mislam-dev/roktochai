@@ -3,10 +3,12 @@ import { container } from "tsyringe";
 import {
   CONTROLLER_KEY,
   CONTROLLER_MIDDLEWARE_KEY,
+  DTO_KEY,
   MIDDLEWARE_KEY,
   ROUTE_KEY,
 } from "../decorator/decorators.key";
 import { RouteDefinition } from "../decorator/routes.decorator";
+import { validateDtoHandler } from "../validator/class-schema.validator";
 export type Constructor = new (...args: any[]) => {};
 export type ControllerMetaData = {
   basePath: string;
@@ -64,11 +66,21 @@ export function registerController(app: Express, controllers: Constructor[]) {
           route.methodName
         ) as RequestHandler[]) || [];
 
+      const dto = Reflect.getMetadata(
+        DTO_KEY,
+        Controller.prototype,
+        route.methodName
+      );
+
       const handler = (controllerInstance as any)[route.methodName].bind(
         controllerInstance
       );
-
-      router[route.method](route.path, [...middlewares, handler]);
+      const dtoHandler = dto ? [validateDtoHandler(dto)] : [];
+      router[route.method](route.path, [
+        ...middlewares,
+        ...dtoHandler,
+        handler,
+      ]);
     });
 
     app.use(controllerMetadata.basePath, router);

@@ -25,7 +25,7 @@ export const validate = async (dtoClass: any, data: any) => {
     output,
   };
 };
-export const validateDto = (dtoClass: any) => {
+export const validateDtoHandler = (dtoClass: any) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { errors, output } = await validate(dtoClass, req.body);
