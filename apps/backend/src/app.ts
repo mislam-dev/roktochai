@@ -1,7 +1,7 @@
 import express, { Express } from "express";
+import "reflect-metadata";
 import setUpMiddleware from "./middleware";
 import setRoutes from "./routes";
-
 declare global {
   namespace Express {
     interface Request {
