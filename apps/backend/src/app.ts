@@ -4,6 +4,7 @@ import morgan from "morgan";
 import passport from "passport";
 import "reflect-metadata";
 import { container } from "tsyringe";
+import { ActivityController } from "./activity/activity.controller";
 import { AuthController } from "./auth/auth.controller";
 import { AuthMiddleware } from "./auth/auth.middleware";
 import { registerController } from "./core/controller/register-controller";
@@ -27,7 +28,12 @@ export function createApp() {
 
   authMiddleware.init(passport);
 
-  registerController(app, [AuthController, UserController, FeaturedController]);
+  registerController(app, [
+    AuthController,
+    UserController,
+    FeaturedController,
+    ActivityController,
+  ]);
 
   // setRoutes(app);
 
