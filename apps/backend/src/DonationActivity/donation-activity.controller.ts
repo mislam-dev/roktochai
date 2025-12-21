@@ -1,11 +1,18 @@
 import { NextFunction, Request, Response } from "express";
+import { autoInjectable } from "tsyringe";
+import { AuthMiddleware } from "../auth/auth.middleware";
+import { Controller } from "../core/decorator/controller.decorator";
+import { Use } from "../core/decorator/middleware.decorator";
+import { DELETE, GET } from "../core/decorator/routes.decorator";
 import { DonationActivityService } from "./donation-activity.service";
 
+@autoInjectable()
+@Controller("/api/v1/donation/activity")
+@Use(AuthMiddleware.authenticate)
 export class DonationActivityController {
-  constructor(
-    private readonly daService: DonationActivityService = new DonationActivityService()
-  ) {}
+  constructor(private readonly daService: DonationActivityService) {}
 
+  @GET("/")
   async all(req: Request, res: Response, next: NextFunction) {
     try {
       const role = (req.user as any)?.role?.role;
@@ -21,11 +28,12 @@ export class DonationActivityController {
     }
   }
 
-  single = async (
+  @GET("/")
+  async single(
     req: Request<{ id: string }>,
     res: Response,
     next: NextFunction
-  ) => {
+  ) {
     try {
       const single = await this.daService.findUnique({
         id: req.params.id,
@@ -38,8 +46,9 @@ export class DonationActivityController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
+  @DELETE("/:id")
   async remove(
     req: Request<{ id: string }>,
     res: Response,

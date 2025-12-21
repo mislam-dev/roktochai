@@ -1,9 +1,12 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "../core/database";
+import { autoInjectable, inject } from "tsyringe";
+import { DB_DONATION_REQUESTED_TOKEN } from "../core/database/token";
 
+@autoInjectable()
 export class DonationActivityService {
   constructor(
-    private readonly da: Prisma.DonationActivityDelegate = prisma.donationActivity
+    @inject(DB_DONATION_REQUESTED_TOKEN)
+    private readonly da: Prisma.DonationActivityDelegate
   ) {}
 
   create(data: Prisma.DonationActivityCreateInput) {
