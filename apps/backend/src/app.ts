@@ -1,5 +1,5 @@
 import cors from "cors";
-import express, { Express } from "express";
+import express, { Express, Request, Response } from "express";
 import morgan from "morgan";
 import passport from "passport";
 import "reflect-metadata";
@@ -31,6 +31,12 @@ export function createApp() {
 
   authMiddleware.init(passport);
 
+  app.get("/", (req: Request, res: Response) => {
+    return res.status(200).json({
+      message: "You are good to go",
+    });
+  });
+
   registerController(app, [
     AuthController,
     UserController,
@@ -40,8 +46,6 @@ export function createApp() {
     DonationActivityController,
     NotificationController,
   ]);
-
-  // setRoutes(app);
 
   return app;
 }
