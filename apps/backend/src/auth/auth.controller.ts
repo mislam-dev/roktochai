@@ -1,12 +1,19 @@
 import { NextFunction, Request, Response } from "express";
 import { autoInjectable } from "tsyringe";
 import { Controller } from "../core/decorator/controller.decorator";
+import { UseDTO } from "../core/decorator/dto.decorator";
 import { Use } from "../core/decorator/middleware.decorator";
 import { GET, POST, PUT } from "../core/decorator/routes.decorator";
 import { HttpException, NotFoundException } from "../core/errors";
 import { AuthMiddleware } from "./auth.middleware";
 import { AuthService, UserCreateDTO } from "./auth.service";
+import { RecoverAccountDto } from "./dtos/recover-account.dto";
 import { SignInDto } from "./dtos/sign-in.dto";
+import { SignUpDto } from "./dtos/sign-up.dto";
+import { UpdateInfoDto } from "./dtos/update-info.dto";
+import { UpdatePasswordDto } from "./dtos/update-password.dto";
+import { UpdateProfileDto } from "./dtos/update-profile.dto";
+import { VerifyOtpDto } from "./dtos/verify-otp.dto";
 
 interface UpdatePasswordRequestBody {
   password: string;
@@ -20,6 +27,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @POST("/sign-in")
+  @UseDTO(SignInDto)
   async signIn(req: Request, res: Response, next: NextFunction) {
     try {
       const { username, password }: SignInDto = req.body;
@@ -36,6 +44,7 @@ export class AuthController {
   }
 
   @POST("/sign-up")
+  @UseDTO(SignUpDto)
   async signUp(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await this.authService.create_user(
@@ -56,6 +65,7 @@ export class AuthController {
   async forgotPassword(req: Request, res: Response, next: NextFunction) {}
 
   @POST("/recover-password")
+  @UseDTO(RecoverAccountDto)
   async recoverAccount(req: Request, res: Response, next: NextFunction) {
     try {
       const user: any = req.user;
@@ -70,8 +80,9 @@ export class AuthController {
     }
   }
 
-  @Use(AuthMiddleware.authenticate)
   @PUT("/update-password")
+  @Use(AuthMiddleware.authenticate)
+  @UseDTO(UpdatePasswordDto)
   async updatePassword(
     req: Request<{}, {}, UpdatePasswordRequestBody>,
     res: Response,
@@ -110,6 +121,7 @@ export class AuthController {
 
   @PUT("/update-info")
   @Use(AuthMiddleware.authenticate)
+  @UseDTO(UpdateInfoDto)
   async updateInfo(req: Request, res: Response, next: NextFunction) {
     try {
       const user: any = req.user;
@@ -126,6 +138,7 @@ export class AuthController {
   }
   @PUT("/update-profile")
   @Use(AuthMiddleware.authenticate)
+  @UseDTO(UpdateProfileDto)
   async updateProfile(req: Request, res: Response, next: NextFunction) {
     try {
       const user: any = req.user;
@@ -147,6 +160,7 @@ export class AuthController {
     }
   }
   @POST("/verify-otp")
+  @UseDTO(VerifyOtpDto)
   async verifyOtp(req: Request, res: Response, next: NextFunction) {
     try {
       const { otpRecordId }: any = req.body;
@@ -179,6 +193,7 @@ export class AuthController {
     }
   }
   @PUT("/set-password")
+  @UseDTO(UpdatePasswordDto)
   async setNewPassword(req: Request, res: Response, next: NextFunction) {
     try {
       const { newPassword, verificationId } = req.body;
