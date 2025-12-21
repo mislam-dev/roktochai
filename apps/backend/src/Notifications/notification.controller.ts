@@ -1,12 +1,19 @@
 import { NextFunction, Request, Response } from "express";
+import { autoInjectable } from "tsyringe";
+import { AuthMiddleware } from "../auth/auth.middleware";
+import { Controller } from "../core/decorator/controller.decorator";
+import { Use } from "../core/decorator/middleware.decorator";
+import { DELETE, GET, PATCH } from "../core/decorator/routes.decorator";
 import { NotificationService } from "./notification.service";
 
+@autoInjectable()
+@Controller("/api/v1/notification")
+@Use(AuthMiddleware.authenticate)
 export class NotificationController {
-  constructor(
-    private readonly notificationService: NotificationService = new NotificationService()
-  ) {}
+  constructor(private readonly notificationService: NotificationService) {}
 
-  all = async (req: Request, res: Response, next: NextFunction) => {
+  @GET("/")
+  async all(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req.user as any).id;
       const data = await this.notificationService.findAllForUser(userId);
@@ -18,9 +25,10 @@ export class NotificationController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
-  read = async (req: Request, res: Response, next: NextFunction) => {
+  @PATCH("/")
+  async read(req: Request, res: Response, next: NextFunction) {
     try {
       const userId = (req.user as any).id; // Changed from req.User.id for consistency
       const data = await this.notificationService.markAsRead(
@@ -35,13 +43,14 @@ export class NotificationController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 
-  remove = async (
+  @DELETE("/:id")
+  async remove(
     req: Request<{ id: string }>,
     res: Response,
     next: NextFunction
-  ) => {
+  ) {
     try {
       await this.notificationService.softDelete(req.params.id);
 
@@ -52,5 +61,5 @@ export class NotificationController {
     } catch (error) {
       next(error);
     }
-  };
+  }
 }

@@ -1,5 +1,4 @@
 import { Express, Request, Response } from "express";
-import notificationRouter from "../Notifications/notification.routes";
 import authRouter from "../auth/auth.routes";
 
 const routeArrays = [
@@ -8,10 +7,6 @@ const routeArrays = [
     handler: authRouter,
   },
 
-  {
-    path: "/api/v1/notification",
-    handler: notificationRouter,
-  },
   {
     path: "/",
     handler: (req: Request, res: Response) => {

@@ -1,9 +1,12 @@
 import { Prisma } from "@prisma/client";
-import { prisma } from "../core/database";
+import { autoInjectable, inject } from "tsyringe";
+import { DB_NOTIFICATIONS_TOKEN } from "../core/database/token";
 
+@autoInjectable()
 export class NotificationService {
   constructor(
-    private readonly notification: Prisma.NotificationDelegate = prisma.notification
+    @inject(DB_NOTIFICATIONS_TOKEN)
+    private readonly notification: Prisma.NotificationDelegate
   ) {}
 
   async findAllForUser(userId: string) {
