@@ -13,4 +13,7 @@ export class UpdatePasswordDto {
   @IsNotEmpty({ message: "Confirm password is required!" })
   // todo @Match("newPassword", { message: "Passwords did not match" })
   confirmPassword!: string;
+
+  @IsNotEmpty({ message: "Verification id is required!" })
+  verificationId!: string;
 }

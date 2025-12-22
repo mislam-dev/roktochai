@@ -1,5 +1,6 @@
 import { blood_type } from "@prisma/client";
 import jwt from "jsonwebtoken";
+import { singleton } from "tsyringe";
 const { JWT_SECRET } = process.env;
 
 export const BLOOD_GROUPS: blood_type[] = [
@@ -18,8 +19,10 @@ type TokenData = {
   email: string;
   username: string;
 };
+
+@singleton()
 export class Token {
-  static generate(data: TokenData) {
+  generate(data: TokenData) {
     const token = jwt.sign(
       {
         id: data.id,

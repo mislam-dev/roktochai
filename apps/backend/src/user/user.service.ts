@@ -1,20 +1,22 @@
 import { Prisma } from "@prisma/client";
-import bcrypt from "bcryptjs";
 import { autoInjectable, inject } from "tsyringe";
+import { PasswordHash } from "../auth/helpers/password-hash.helper";
 import { prisma } from "../core/database";
 import { DB_USER_TOKEN } from "../core/database/token";
-
-import {
-  sendMailToAdminsForNewUser,
-  sendMailToNewUser,
-  sendMailToVerifiedUser,
-} from "./Mail";
-import { nextRoleName, prevRoleName, randomPassword } from "./user.helpers";
+import { ProfileService } from "../profile/profile.service";
+import { RoleName, RoleService } from "../role/role.service";
+// todo introduce new class for helpers
+import { InternalServerException } from "../core/errors";
+import { CreateUserDto } from "./dtos/create-user.dto";
+import { randomPassword } from "./user.helpers";
 
 @autoInjectable()
 export class UserService {
   constructor(
-    @inject(DB_USER_TOKEN) private readonly user: Prisma.UserDelegate
+    @inject(DB_USER_TOKEN) private readonly user: Prisma.UserDelegate,
+    private readonly hash: PasswordHash,
+    private readonly roleService: RoleService,
+    private readonly profileService: ProfileService
   ) {}
   async findAll() {
     return this.user.findMany({
@@ -22,58 +24,59 @@ export class UserService {
     });
   }
 
-  async createUser(data: any) {
+  async createUser(data: CreateUserDto) {
     const { firstName, lastName, email, phoneNo, blood } = data;
 
-    // 1. Generate Unique Username
-    let username = this.generateUsername(`${firstName} ${lastName}`);
-    while (await this.user.findFirst({ where: { username } })) {
-      username = this.generateUsername(
-        firstName + Math.floor(Math.random() * 1000)
-      );
-    }
+    let username = await this.generateUniqueUsername(firstName, lastName);
 
-    // 2. Hash Password
     const password = randomPassword(12);
-    const SALT = process.env.SALT_ROUND ? parseInt(process.env.SALT_ROUND) : 10;
-    const hash = bcrypt.hashSync(password, bcrypt.genSaltSync(SALT));
+    const hash = this.hash.hash(password);
 
-    // 3. Create User
+    const role = await this.roleService.findOne({ role: "user" });
+    console.error("Role is not found on the tables");
+    if (!role) throw new InternalServerException();
+
     const newUser = await this.user.create({
       data: {
         email,
         username,
         password: hash,
         isVerified: true,
-        roleId: "user",
-        Profile: {
-          create: { firstName, lastName, bloodGroup: blood, phoneNo },
-        },
+        roleId: role.id,
       },
     });
 
-    // 4. Background Tasks (Mails)
-    sendMailToNewUser(email, password, `${firstName} ${lastName}`);
-    const admins = await this.user.findMany({
-      where: { role: { role: "super_admin" } },
-      select: { email: true },
+    await this.profileService.create({
+      firstName,
+      lastName,
+      bloodGroup: blood,
+      phoneNo,
+      userId: newUser.id,
     });
-    sendMailToAdminsForNewUser(admins.map((a) => a.email));
+    // todo Background Tasks introduce mail service (Mails)
+    // sendMailToNewUser(email, password, `${firstName} ${lastName}`);
+    // const admins = await this.user.findMany({
+    //   where: { role: { role: "super_admin" } },
+    //   select: { email: true },
+    // });
+    // sendMailToAdminsForNewUser(admins.map((a) => a.email));
 
     return newUser;
   }
 
-  async promoteUser(findUserId: string, currentRole: any, authUserId: string) {
-    const roleText = nextRoleName(currentRole.role);
-    const targetRole = await prisma.role.findFirst({
-      where: { role: roleText },
-    });
+  async promoteUser(
+    findUserId: string,
+    currentRole: RoleName,
+    authUserId: string
+  ) {
+    const targetRole = await this.roleService.nextRole(currentRole);
 
     const updatedUser = await this.user.update({
       where: { id: findUserId },
       data: { roleId: targetRole?.id },
     });
 
+    // todo use notification service
     await prisma.notification.create({
       data: {
         message: `You have been promoted to ${targetRole?.name}!`,
@@ -85,48 +88,21 @@ export class UserService {
     return updatedUser;
   }
 
-  async updateProfile(userId: string, updateData: any) {
-    return this.user.update({
-      where: { id: userId },
-      data: { Profile: { update: updateData } },
-    });
-  }
-
   async findByUsernameOrEmail(identifier: string) {
     return this.user.findFirst({
       where: { OR: [{ email: identifier }, { username: identifier }] },
     });
   }
 
-  async getRoles() {
-    return prisma.role.findMany({
-      select: { id: true, name: true, role: true },
-    });
-  }
-
-  async verifyUser(username: string) {
-    const userData = await this.user.update({
-      where: { username },
-      data: { isVerified: true },
-      include: { Profile: true },
-    });
-
-    // Trigger verification email
-    sendMailToVerifiedUser(userData.email);
-    return userData;
-  }
-
   async demoteUser(findUserId: string, currentRole: any, authUserId: string) {
-    const roleText = prevRoleName(currentRole.role); // Logic for role sequence
-    const targetRole = await prisma.role.findFirst({
-      where: { role: roleText },
-    });
+    const targetRole = await this.roleService.prevRole(currentRole.role); // Logic for role sequence
 
     const updatedUser = await this.user.update({
       where: { id: findUserId },
       data: { roleId: targetRole?.id },
     });
 
+    // todo use notification service
     await prisma.notification.create({
       data: {
         message: `You have been demoted! Now you are ${targetRole?.name}`,
@@ -136,6 +112,17 @@ export class UserService {
     });
 
     return updatedUser;
+  }
+
+  async verifyUser(username: string) {
+    const userData = await this.user.update({
+      where: { username },
+      data: { isVerified: true },
+    });
+
+    // todo Trigger verification email
+    // sendMailToVerifiedUser(userData.email);
+    return userData;
   }
 
   async requestDeletion(username: string) {
@@ -157,14 +144,14 @@ export class UserService {
   }
 
   // Placeholder for future update logic
-  async updateUserInfo(id: string, data: any) {
+  async updateUserInfo(id: string, data: Prisma.UserUpdateInput) {
     return this.user.update({
       where: { id },
       data,
     });
   }
 
-  generateUsername(name: string) {
+  private generateUsername(name: string) {
     // Generate a random number between 1000 and 9999
     const randomNumber = Math.floor(Math.random() * (9999 - 1000 + 1)) + 1000;
 
@@ -172,5 +159,28 @@ export class UserService {
     const username = `${name}${randomNumber}`;
 
     return username.replace(" ", "_");
+  }
+
+  private async generateUniqueUsername(firstName: string, lastName: string) {
+    let username = this.generateUsername(`${firstName} ${lastName}`);
+    while (await this.user.findFirst({ where: { username } })) {
+      username = this.generateUsername(
+        firstName + Math.floor(Math.random() * 1000)
+      );
+    }
+    return username;
+  }
+
+  async findOne(options: Prisma.UserWhereInput) {
+    return this.user.findFirst({ where: options });
+  }
+  async update(
+    where: Prisma.UserWhereUniqueInput,
+    data: Prisma.UserUpdateInput
+  ) {
+    this.user.update({
+      where,
+      data,
+    });
   }
 }

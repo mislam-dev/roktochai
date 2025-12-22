@@ -1,42 +1,30 @@
-import { blood_type, Prisma, PrismaClient } from "@prisma/client";
-import { inject, injectable } from "tsyringe";
-import { DBClientToken } from "../core/database/token";
+import { Prisma } from "@prisma/client";
+import { injectable } from "tsyringe";
 import {
   HttpException,
-  InternalServerException,
   NotFoundException,
   ValidationException,
 } from "../core/errors";
+import { OtpRecordsService } from "../otp-records/otp-records.service";
+import { ProfileService } from "../profile/profile.service";
+import { CreateUserDto } from "../user/dtos/create-user.dto";
+import { UserService } from "../user/user.service";
+import { UpdateInfoDto } from "./dtos/update-info.dto";
 import { PasswordHash } from "./helpers/password-hash.helper";
 import { Token } from "./helpers/token.helper";
 
-export type UserCreateDTO = {
-  firstName: any;
-  lastName: any;
-  email: string;
-  blood: blood_type;
-  password: string;
-};
-
 @injectable()
 export class AuthService {
-  private readonly user: Prisma.UserDelegate;
-  private readonly profile: Prisma.ProfileDelegate;
-  private readonly otpRecords: Prisma.OtpRecordsDelegate;
-  private readonly role: Prisma.RoleDelegate;
   constructor(
+    private readonly otpRecordsService: OtpRecordsService,
+    private readonly userService: UserService,
+    private readonly profileService: ProfileService,
     private readonly hash: PasswordHash,
-    @inject(DBClientToken)
-    readonly prisma: PrismaClient
-  ) {
-    this.user = prisma.user;
-    this.profile = prisma.profile;
-    this.otpRecords = prisma.otpRecords;
-    this.role = prisma.role;
-  }
+    private readonly token: Token
+  ) {}
 
   async signIn(username: string, password: string) {
-    const findUser = await this.findOne({
+    const findUser = await this.userService.findOne({
       OR: [{ username }, { email: username }],
     });
 
@@ -56,61 +44,20 @@ export class AuthService {
         406
       );
 
-    return Token.generate(findUser);
-  }
-  async create_user(values: UserCreateDTO) {
-    const { firstName, lastName, email, blood, password } = values;
-
-    const hash = this.hash.hash(password);
-
-    const role = await this.role.findUnique({ where: { role: "user" } });
-    console.error("Role is not found on the tables");
-    if (!role) throw new InternalServerException();
-
-    let username = await this.getRandomUniqueUsername(firstName, lastName);
-
-    const data = await this.user.create({
-      data: {
-        email,
-        username,
-        password: hash,
-        roleId: role?.id,
-        Profile: {
-          create: {
-            firstName,
-            lastName,
-            bloodGroup: blood,
-          },
-        },
-      },
-    });
-
-    return data;
+    return this.token.generate(findUser);
   }
 
-  async generateOtp(email: string, userId: string) {
-    // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit OTP
-
-    // Send OTP via mail (pseudo-code)
-    // await sendOtpEmail(user.email, otp);
-
-    // Update OTP in the database
-    // todo need otp service
-    await this.otpRecords.create({
-      data: {
-        otp,
-        email,
-        userId,
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000), // OTP valid for 15 minutes
-      },
-    });
-
-    return true;
+  async signUp(data: CreateUserDto) {
+    return this.userService.createUser(data);
   }
 
-  async updatePassword(password: string, newPassword: string, userId: string) {
-    const findUser = await this.findOne({ id: userId });
+  async recoverAccount(userId: string, userEmail: string) {
+    const otp = this.generateOtp(userId, userEmail);
+    return otp;
+  }
+
+  async updatePassword(userId: string, password: string, newPassword: string) {
+    const findUser = await this.userService.findOne({ id: userId });
 
     if (!findUser) throw new NotFoundException();
     const isPasswordOk = this.hash.verify(password, findUser.password);
@@ -125,91 +72,72 @@ export class AuthService {
 
     const hashedNewPassword = this.hash.hash(newPassword);
 
-    return this.user.update({
-      where: { id: userId },
-      data: { password: hashedNewPassword },
-    });
+    return this.userService.update(
+      { id: userId },
+      { password: hashedNewPassword }
+    );
   }
 
-  // private methods
-  findOne(options: Prisma.UserFindManyArgs["where"]) {
-    return this.user.findFirst({
-      where: options,
-    });
+  async me(userId: string) {
+    const userData = await this.userService.findOne({ id: userId });
+    return userData;
   }
 
-  update(id: string, data: Prisma.UserUpdateInput) {
-    return this.user.update({
-      where: { id },
-      data,
-    });
+  updateInfo(userId: string, data: UpdateInfoDto) {
+    return this.userService.update({ id: userId }, data);
   }
 
   async updateProfile(userId: string, updateData: Prisma.ProfileUpdateInput) {
-    return this.profile.update({
-      where: { userId },
-      data: updateData,
-    });
+    return this.profileService.updateProfileWitUserId(userId, updateData);
   }
 
   async verifyOtp(otpRecordId: string) {
     const verificationId = Math.random().toString(36).substring(2, 22);
     const hash = this.hash.otpHash(verificationId);
-    await this.otpRecords.update({
-      where: { id: otpRecordId },
-      data: {
-        verificationId: hash,
-      },
-    });
+    await this.otpRecordsService.update(
+      { id: otpRecordId },
+      { verificationId: hash }
+    );
     return hash;
   }
 
-  findOtpRecord(verificationId: string) {
-    return this.otpRecords.findFirst({
-      where: {
-        verificationId,
-      },
+  async verifyVerificationId(verificationId: string) {
+    const findOtpData = await this.otpRecordsService.findOne({
+      verificationId,
     });
+    if (!findOtpData) throw new HttpException("Verification failed", 400);
+    return findOtpData;
   }
 
   async setNewPassword(verificationId: string, newPassword: string) {
-    const otpRecord = await this.otpRecords.findFirst({
-      where: { verificationId },
-    });
+    const otpRecord = await this.otpRecordsService.findOne({ verificationId });
 
     if (!otpRecord) throw new NotFoundException();
 
     const hashedNewPassword = this.hash.hash(newPassword);
 
-    await this.user.update({
-      where: { id: otpRecord.userId },
-      data: { password: hashedNewPassword, forgotVerificationId: null },
-    });
+    await this.userService.update(
+      { id: otpRecord.userId },
+      { password: hashedNewPassword, forgotVerificationId: null }
+    );
 
-    await this.otpRecords.delete({
-      where: {
-        id: otpRecord.id,
-      },
-    });
+    await this.otpRecordsService.remove(otpRecord.id);
   }
 
-  private async getRandomUniqueUsername(firstName: string, lastName: string) {
-    let username = this.generateUsername(firstName + " " + lastName);
-    while (true) {
-      const data = await this.findOne({ username });
-      if (!data) break;
-      username = this.generateUsername(firstName);
-    }
-    return username;
-  }
+  async generateOtp(userId: string, email: string) {
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit OTP
 
-  generateUsername(name: string) {
-    // Generate a random number between 1000 and 9999
-    const randomNumber = Math.floor(Math.random() * (9999 - 1000 + 1)) + 1000;
+    // Send OTP via mail (pseudo-code)
+    // await sendOtpEmail(user.email, otp);
 
-    // Concatenate the name and random number
-    const username = `${name}${randomNumber}`;
+    await this.otpRecordsService.create({
+      otp,
+      email,
+      userId,
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000), // OTP valid for 15 minutes
+    });
 
-    return username.replace(" ", "_");
+    return otp;
   }
 }

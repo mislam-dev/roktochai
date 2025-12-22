@@ -8,22 +8,3 @@ export const randomPassword = (length: number) => {
   }
   return password;
 };
-
-export const nextRoleName = (name: "user" | "admin" | "super_admin") => {
-  const nextRoleObject = {
-    user: "admin",
-    admin: "super_admin",
-    super_admin: "super_admin",
-  };
-
-  return nextRoleObject[name];
-};
-export const prevRoleName = (name: "user" | "admin" | "super_admin") => {
-  const prevRoleObject = {
-    super_admin: "admin",
-    admin: "user",
-    user: "user",
-  };
-
-  return prevRoleObject[name];
-};

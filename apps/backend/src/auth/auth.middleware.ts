@@ -4,11 +4,11 @@ import { NextFunction, Request, Response } from "express";
 import passport, { PassportStatic } from "passport";
 import { injectable } from "tsyringe";
 import { UnauthorizedException } from "../core/errors";
-import { AuthService } from "./auth.service";
+import { UserService } from "../user/user.service";
 
 @injectable()
 export class AuthMiddleware {
-  constructor(private readonly authService: AuthService) {}
+  constructor(private readonly userService: UserService) {}
 
   init(passport: PassportStatic) {
     const opts: StrategyOptions = {
@@ -19,7 +19,7 @@ export class AuthMiddleware {
     passport.use(
       new Strategy(opts, async (payload, done) => {
         try {
-          const user: any = await this.authService.findOne({
+          const user: any = await this.userService.findOne({
             id: payload.id,
           });
           if (!user) return done(null, false);

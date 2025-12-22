@@ -4,12 +4,13 @@ import { Controller } from "../core/decorator/controller.decorator";
 import { UseDTO } from "../core/decorator/dto.decorator";
 import { Use } from "../core/decorator/middleware.decorator";
 import { GET, POST, PUT } from "../core/decorator/routes.decorator";
-import { HttpException, NotFoundException } from "../core/errors";
+import { NotFoundException } from "../core/errors";
+import { CreateUserDto } from "../user/dtos/create-user.dto";
+import { UserService } from "../user/user.service";
 import { AuthMiddleware } from "./auth.middleware";
-import { AuthService, UserCreateDTO } from "./auth.service";
+import { AuthService } from "./auth.service";
 import { RecoverAccountDto } from "./dtos/recover-account.dto";
 import { SignInDto } from "./dtos/sign-in.dto";
-import { SignUpDto } from "./dtos/sign-up.dto";
 import { UpdateInfoDto } from "./dtos/update-info.dto";
 import { UpdatePasswordDto } from "./dtos/update-password.dto";
 import { UpdateProfileDto } from "./dtos/update-profile.dto";
@@ -24,7 +25,10 @@ interface UpdatePasswordRequestBody {
 @autoInjectable()
 @Controller("/api/v1/auth")
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly userService: UserService
+  ) {}
 
   @POST("/sign-in")
   @UseDTO(SignInDto)
@@ -40,9 +44,9 @@ export class AuthController {
   }
 
   @POST("/sign-up")
-  @UseDTO(SignUpDto)
+  @UseDTO(CreateUserDto)
   async signUp(req: Request, res: Response) {
-    const data = await this.authService.create_user(req.body as UserCreateDTO);
+    await this.authService.signUp(req.body);
 
     return res.status(200).json({
       isSuccess: true,
@@ -59,7 +63,7 @@ export class AuthController {
   async recoverAccount(req: Request, res: Response) {
     const user: any = req.user;
 
-    await this.authService.generateOtp(user.email, user.idß);
+    await this.authService.recoverAccount(user.email, user.idß);
 
     return res
       .status(200)
@@ -76,7 +80,7 @@ export class AuthController {
     const { password, newPassword } = req.body;
     const user: any = req.user; // Assuming user info is stored in req.user
 
-    await this.authService.updatePassword(password, newPassword, user.id);
+    await this.authService.updatePassword(user.id, password, newPassword);
 
     return res.status(200).json({
       message: "Password updated successfully!",
@@ -88,7 +92,7 @@ export class AuthController {
   async me(req: Request, res: Response) {
     const user: any = req.user;
 
-    const userData = await this.authService.findOne({ id: user.id });
+    const userData = await this.userService.findOne({ id: user.id });
     if (!userData) throw new NotFoundException();
     return res.status(200).json({
       message: "User found!",
@@ -101,26 +105,22 @@ export class AuthController {
   @UseDTO(UpdateInfoDto)
   async updateInfo(req: Request, res: Response) {
     const user: any = req.user;
-    const { email }: { email?: string } = req.body;
-
-    await this.authService.update(user.id, { email });
+    await this.authService.updateInfo(user.id, req.body);
 
     return res.status(200).json({
       message: "Profile updated successfully!",
     });
   }
+
   @PUT("/update-profile")
   @Use(AuthMiddleware.authenticate)
   @UseDTO(UpdateProfileDto)
   async updateProfile(req: Request, res: Response) {
     const user: any = req.user;
 
-    const updateData: any = {};
-    Object.assign(updateData, req.body);
-
     const updatedProfile = await this.authService.updateProfile(
       user.id,
-      updateData
+      req.body as UpdateProfileDto
     );
 
     return res.status(200).json({
@@ -128,6 +128,7 @@ export class AuthController {
       data: updatedProfile,
     });
   }
+
   @POST("/verify-otp")
   @UseDTO(VerifyOtpDto)
   async verifyOtp(req: Request, res: Response) {
@@ -140,30 +141,23 @@ export class AuthController {
       data: hash,
     });
   }
+
   @GET("/verify-verification-id")
   async verifyVerificationId(req: Request, res: Response) {
     const { data: verificationId }: any = req.query;
 
-    const data = await this.authService.findOtpRecord(verificationId);
-
-    if (!data) throw new HttpException("Verification failed", 400);
+    const data = await this.authService.verifyVerificationId(verificationId);
 
     return res.status(200).json({
       message: "Verification successfully!",
       data: verificationId,
     });
   }
+
   @PUT("/set-password")
   @UseDTO(UpdatePasswordDto)
   async setNewPassword(req: Request, res: Response) {
     const { newPassword, verificationId } = req.body;
-
-    if (!verificationId) {
-      return res.status(406).json({
-        message: "Verification ID is required",
-        data: null,
-      });
-    }
 
     await this.authService.setNewPassword(verificationId, newPassword);
 

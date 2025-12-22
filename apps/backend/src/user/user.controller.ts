@@ -5,14 +5,19 @@ import { Controller } from "../core/decorator/controller.decorator";
 import { UseDTO } from "../core/decorator/dto.decorator";
 import { Use } from "../core/decorator/middleware.decorator";
 import { DELETE, GET, PATCH, POST } from "../core/decorator/routes.decorator";
-import { CreateUserDto, PromoteDemoteDto } from "./dtos/create-user.dto";
+import { RoleService } from "../role/role.service";
+import { CreateUserDto } from "./dtos/create-user.dto";
+import { PromoteDemoteDto } from "./dtos/promote-demote.dto";
 import { UserService } from "./user.service";
 
 @autoInjectable()
 @Controller("/api/v1/users")
 @Use([AuthMiddleware.isAuthenticate, AuthMiddleware.isSuperAdmin])
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly roleService: RoleService
+  ) {}
 
   @GET("/")
   async all(req: Request, res: Response) {
@@ -39,15 +44,9 @@ export class UserController {
     res.status(200).json({ isSuccess: true, message: "User found!", data });
   }
 
-  async updateProfile(req: Request, res: Response) {
-    const userId = (req.user as any).id;
-    await this.userService.updateProfile(userId, req.body);
-    res.status(200).json({ message: "Profile updated successfully!" });
-  }
-
   @GET("/roles")
   async getRoles(req: Request, res: Response) {
-    const data = await this.userService.getRoles();
+    const data = await this.roleService.getRoles();
     res.status(200).json({ message: "Roles retrieved successfully", data });
   }
 
