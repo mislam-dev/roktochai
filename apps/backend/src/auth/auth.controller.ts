@@ -32,7 +32,7 @@ export class AuthController {
     try {
       const { username, password }: SignInDto = req.body;
 
-      const token = this.authService.signIn(username, password);
+      const token = await this.authService.signIn(username, password);
 
       return res.status(200).json({
         message: "Login was successful",

@@ -65,6 +65,7 @@ export class AuthService {
     const hash = this.hash.hash(password);
 
     const role = await this.role.findUnique({ where: { role: "user" } });
+    console.error("Role is not found on the tables");
     if (!role) throw new InternalServerException();
 
     let username = await this.getRandomUniqueUsername(firstName, lastName);
