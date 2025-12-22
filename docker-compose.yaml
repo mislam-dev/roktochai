@@ -24,19 +24,34 @@ services:
     env_file:
       - ./apps/backend/.env
     environment:
-      DATABASE_URL: mongodb://database_mongo:27017/projectb
+      DATABASE_URL: mongodb://mongo:27017/roktochai
     volumes:
       - ./apps/backend:/app
       - /app/node_modules
     depends_on:
-      - database_mongo
+      - mongo
     ports:
       - 9000:9000
 
-  database_mongo:
-    container_name: mongodb
+  mongo:
+    container_name: database_mongo
     image: mongo:6-jammy
     ports:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    command: ["--replSet", "rs0", "--bind_ip_all"]
+    healthcheck:
+      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}) }" | mongosh --port 27017 --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 5s
+  mongo_setup:
+    image: mongo:6-jammy
+    container_name: mongodb_setup
+    depends_on:
+      mongo:
+        condition: service_healthy
+    entrypoint: >
+      bash -c "echo 'Replica set initialized'; exit 0;"
