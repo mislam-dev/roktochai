@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { autoInjectable, inject } from "tsyringe";
 import { prisma } from "../core/database";
 import { DB_USER_TOKEN } from "../core/database/token";
-import generateUsername from "../helpers/generateUsername";
+
 import {
   sendMailToAdminsForNewUser,
   sendMailToNewUser,
@@ -26,9 +26,11 @@ export class UserService {
     const { firstName, lastName, email, phoneNo, blood } = data;
 
     // 1. Generate Unique Username
-    let username = generateUsername(`${firstName} ${lastName}`);
+    let username = this.generateUsername(`${firstName} ${lastName}`);
     while (await this.user.findFirst({ where: { username } })) {
-      username = generateUsername(firstName + Math.floor(Math.random() * 1000));
+      username = this.generateUsername(
+        firstName + Math.floor(Math.random() * 1000)
+      );
     }
 
     // 2. Hash Password
@@ -160,5 +162,15 @@ export class UserService {
       where: { id },
       data,
     });
+  }
+
+  generateUsername(name: string) {
+    // Generate a random number between 1000 and 9999
+    const randomNumber = Math.floor(Math.random() * (9999 - 1000 + 1)) + 1000;
+
+    // Concatenate the name and random number
+    const username = `${name}${randomNumber}`;
+
+    return username.replace(" ", "_");
   }
 }

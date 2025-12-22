@@ -89,7 +89,7 @@ export function registerController(app: Express, controllers: Constructor[]) {
         next: NextFunction
       ) => {
         try {
-          return await handler(req, res, next);
+          return await handler(req, res);
         } catch (error) {
           return next(error);
         }

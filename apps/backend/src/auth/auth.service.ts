@@ -7,7 +7,6 @@ import {
   NotFoundException,
   ValidationException,
 } from "../core/errors";
-import generateUsername from "../helpers/generateUsername";
 import { PasswordHash } from "./helpers/password-hash.helper";
 import { Token } from "./helpers/token.helper";
 
@@ -195,12 +194,22 @@ export class AuthService {
   }
 
   private async getRandomUniqueUsername(firstName: string, lastName: string) {
-    let username = generateUsername(firstName + " " + lastName);
+    let username = this.generateUsername(firstName + " " + lastName);
     while (true) {
       const data = await this.findOne({ username });
       if (!data) break;
-      username = generateUsername(firstName);
+      username = this.generateUsername(firstName);
     }
     return username;
+  }
+
+  generateUsername(name: string) {
+    // Generate a random number between 1000 and 9999
+    const randomNumber = Math.floor(Math.random() * (9999 - 1000 + 1)) + 1000;
+
+    // Concatenate the name and random number
+    const username = `${name}${randomNumber}`;
+
+    return username.replace(" ", "_");
   }
 }

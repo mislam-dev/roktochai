@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import { autoInjectable } from "tsyringe";
 import { AuthMiddleware } from "../auth/auth.middleware";
 import { Controller } from "../core/decorator/controller.decorator";
@@ -13,15 +13,11 @@ export class ActivityController {
   constructor(private readonly activityService: ActivityService) {}
 
   @GET("/")
-  async all(req: Request, res: Response, next: NextFunction) {
-    try {
-      const data = await this.activityService.findAll();
-      return res.status(200).json({
-        message: "Request was successful!",
-        data: data,
-      });
-    } catch (error) {
-      next(error);
-    }
+  async all(req: Request, res: Response) {
+    const data = await this.activityService.findAll();
+    return res.status(200).json({
+      message: "Request was successful!",
+      data: data,
+    });
   }
 }

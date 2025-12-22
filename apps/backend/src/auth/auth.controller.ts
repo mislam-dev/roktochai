@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import { autoInjectable } from "tsyringe";
 import { Controller } from "../core/decorator/controller.decorator";
 import { UseDTO } from "../core/decorator/dto.decorator";
@@ -28,56 +28,42 @@ export class AuthController {
 
   @POST("/sign-in")
   @UseDTO(SignInDto)
-  async signIn(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { username, password }: SignInDto = req.body;
+  async signIn(req: Request, res: Response) {
+    const { username, password }: SignInDto = req.body;
 
-      const token = await this.authService.signIn(username, password);
+    const token = await this.authService.signIn(username, password);
 
-      return res.status(200).json({
-        message: "Login was successful",
-        data: { token },
-      });
-    } catch (error) {
-      next(error);
-    }
+    return res.status(200).json({
+      message: "Login was successful",
+      data: { token },
+    });
   }
 
   @POST("/sign-up")
   @UseDTO(SignUpDto)
-  async signUp(req: Request, res: Response, next: NextFunction) {
-    try {
-      const data = await this.authService.create_user(
-        req.body as UserCreateDTO
-      );
+  async signUp(req: Request, res: Response) {
+    const data = await this.authService.create_user(req.body as UserCreateDTO);
 
-      return res.status(200).json({
-        isSuccess: true,
-        message: "Registration Successful",
-        data: null,
-      });
-    } catch (error) {
-      next(error);
-    }
+    return res.status(200).json({
+      isSuccess: true,
+      message: "Registration Successful",
+      data: null,
+    });
   }
 
   @POST("/forgot-password")
-  async forgotPassword(req: Request, res: Response, next: NextFunction) {}
+  async forgotPassword(req: Request, res: Response) {}
 
   @POST("/recover-password")
   @UseDTO(RecoverAccountDto)
-  async recoverAccount(req: Request, res: Response, next: NextFunction) {
-    try {
-      const user: any = req.user;
+  async recoverAccount(req: Request, res: Response) {
+    const user: any = req.user;
 
-      await this.authService.generateOtp(user.email, user.idß);
+    await this.authService.generateOtp(user.email, user.idß);
 
-      return res
-        .status(200)
-        .json({ message: "We have send you an OTP to your email" });
-    } catch (error) {
-      next(error);
-    }
+    return res
+      .status(200)
+      .json({ message: "We have send you an OTP to your email" });
   }
 
   @PUT("/update-password")
@@ -85,134 +71,105 @@ export class AuthController {
   @UseDTO(UpdatePasswordDto)
   async updatePassword(
     req: Request<{}, {}, UpdatePasswordRequestBody>,
-    res: Response,
-    next: NextFunction
+    res: Response
   ) {
-    try {
-      const { password, newPassword } = req.body;
-      const user: any = req.user; // Assuming user info is stored in req.user
+    const { password, newPassword } = req.body;
+    const user: any = req.user; // Assuming user info is stored in req.user
 
-      await this.authService.updatePassword(password, newPassword, user.id);
+    await this.authService.updatePassword(password, newPassword, user.id);
 
-      return res.status(200).json({
-        message: "Password updated successfully!",
-      });
-    } catch (error) {
-      next(error);
-    }
+    return res.status(200).json({
+      message: "Password updated successfully!",
+    });
   }
 
   @POST("/me")
   @Use(AuthMiddleware.authenticate)
-  async me(req: Request, res: Response, next: NextFunction) {
+  async me(req: Request, res: Response) {
     const user: any = req.user;
 
-    try {
-      const userData = await this.authService.findOne({ id: user.id });
-      if (!userData) throw new NotFoundException();
-      return res.status(200).json({
-        message: "User found!",
-        data: userData,
-      });
-    } catch (error) {
-      next(error);
-    }
+    const userData = await this.authService.findOne({ id: user.id });
+    if (!userData) throw new NotFoundException();
+    return res.status(200).json({
+      message: "User found!",
+      data: userData,
+    });
   }
 
   @PUT("/update-info")
   @Use(AuthMiddleware.authenticate)
   @UseDTO(UpdateInfoDto)
-  async updateInfo(req: Request, res: Response, next: NextFunction) {
-    try {
-      const user: any = req.user;
-      const { email }: { email?: string } = req.body;
+  async updateInfo(req: Request, res: Response) {
+    const user: any = req.user;
+    const { email }: { email?: string } = req.body;
 
-      await this.authService.update(user.id, { email });
+    await this.authService.update(user.id, { email });
 
-      return res.status(200).json({
-        message: "Profile updated successfully!",
-      });
-    } catch (error) {
-      next(error);
-    }
+    return res.status(200).json({
+      message: "Profile updated successfully!",
+    });
   }
   @PUT("/update-profile")
   @Use(AuthMiddleware.authenticate)
   @UseDTO(UpdateProfileDto)
-  async updateProfile(req: Request, res: Response, next: NextFunction) {
-    try {
-      const user: any = req.user;
+  async updateProfile(req: Request, res: Response) {
+    const user: any = req.user;
 
-      const updateData: any = {};
-      Object.assign(updateData, req.body);
+    const updateData: any = {};
+    Object.assign(updateData, req.body);
 
-      const updatedProfile = await this.authService.updateProfile(
-        user.id,
-        updateData
-      );
+    const updatedProfile = await this.authService.updateProfile(
+      user.id,
+      updateData
+    );
 
-      return res.status(200).json({
-        message: "Profile updated successfully!",
-        data: updatedProfile,
-      });
-    } catch (error) {
-      next(error);
-    }
+    return res.status(200).json({
+      message: "Profile updated successfully!",
+      data: updatedProfile,
+    });
   }
   @POST("/verify-otp")
   @UseDTO(VerifyOtpDto)
-  async verifyOtp(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { otpRecordId }: any = req.body;
-      // Generate a random string with 20 characters
-      const hash = await this.authService.verifyOtp(otpRecordId);
+  async verifyOtp(req: Request, res: Response) {
+    const { otpRecordId }: any = req.body;
+    // Generate a random string with 20 characters
+    const hash = await this.authService.verifyOtp(otpRecordId);
 
-      return res.status(200).json({
-        message: "OTP verified successfully!",
-        data: hash,
-      });
-    } catch (error) {
-      next(error);
-    }
+    return res.status(200).json({
+      message: "OTP verified successfully!",
+      data: hash,
+    });
   }
   @GET("/verify-verification-id")
-  async verifyVerificationId(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { data: verificationId }: any = req.query;
+  async verifyVerificationId(req: Request, res: Response) {
+    const { data: verificationId }: any = req.query;
 
-      const data = await this.authService.findOtpRecord(verificationId);
+    const data = await this.authService.findOtpRecord(verificationId);
 
-      if (!data) throw new HttpException("Verification failed", 400);
+    if (!data) throw new HttpException("Verification failed", 400);
 
-      return res.status(200).json({
-        message: "Verification successfully!",
-        data: verificationId,
-      });
-    } catch (error) {
-      next(error);
-    }
+    return res.status(200).json({
+      message: "Verification successfully!",
+      data: verificationId,
+    });
   }
   @PUT("/set-password")
   @UseDTO(UpdatePasswordDto)
-  async setNewPassword(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { newPassword, verificationId } = req.body;
+  async setNewPassword(req: Request, res: Response) {
+    const { newPassword, verificationId } = req.body;
 
-      if (!verificationId) {
-        return res.status(406).json({
-          message: "Verification ID is required",
-          data: null,
-        });
-      }
-
-      await this.authService.setNewPassword(verificationId, newPassword);
-
-      return res.status(200).json({
-        message: "Password updated successfully!",
+    if (!verificationId) {
+      return res.status(406).json({
+        message: "Verification ID is required",
         data: null,
       });
-    } catch (error) {
-      next(error);
     }
+
+    await this.authService.setNewPassword(verificationId, newPassword);
+
+    return res.status(200).json({
+      message: "Password updated successfully!",
+      data: null,
+    });
   }
 }
