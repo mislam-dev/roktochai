@@ -1,4 +1,11 @@
-import { Express, RequestHandler, Router } from "express";
+import {
+  Express,
+  NextFunction,
+  Request,
+  RequestHandler,
+  Response,
+  Router,
+} from "express";
 import { container } from "tsyringe";
 import {
   CONTROLLER_KEY,
@@ -75,11 +82,24 @@ export function registerController(app: Express, controllers: Constructor[]) {
       const handler = (controllerInstance as any)[route.methodName].bind(
         controllerInstance
       );
+
+      const handleWithError = async (
+        req: Request,
+        res: Response,
+        next: NextFunction
+      ) => {
+        try {
+          return await handler(req, res, next);
+        } catch (error) {
+          return next(error);
+        }
+      };
+
       const dtoHandler = dto ? [validateDtoHandler(dto)] : [];
       router[route.method](route.path, [
         ...middlewares,
         ...dtoHandler,
-        handler,
+        handleWithError,
       ]);
     });
 
