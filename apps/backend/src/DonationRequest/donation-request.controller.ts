@@ -1,4 +1,3 @@
-import { blood_type, donation_status } from "@prisma/client";
 import { Request, Response } from "express";
 import { autoInjectable } from "tsyringe";
 import { AuthMiddleware } from "../auth/auth.middleware";
@@ -11,25 +10,6 @@ import { AssignDonorDto } from "./dtos/asign-donor.dto";
 import { CreateRequestDto } from "./dtos/create.dto";
 import { FinderDonorDto } from "./dtos/find-donor.dto";
 
-interface AllReqQuery {
-  status?: donation_status;
-  limit?: number;
-}
-interface CreateReqBody {
-  firstName: string;
-  lastName: string;
-  email?: string;
-  phone: string;
-  address: string;
-  date: string;
-  blood: blood_type;
-  reason: string;
-  emailUserId: string;
-}
-
-interface AssignReqBody {
-  donor: string;
-}
 @autoInjectable()
 @Controller("/api/v1/donation/requested")
 @Use(AuthMiddleware.authenticate)
@@ -37,7 +17,7 @@ export class DonationRequestController {
   constructor(private readonly drService: DonationRequestService) {}
 
   @GET("/")
-  async all(req: Request<{}, {}, {}, AllReqQuery>, res: Response) {
+  async all(req: Request, res: Response) {
     const role = (req.user as any)?.role?.role;
 
     const data = await this.drService.findAll(role, (req.user as any).id);
@@ -50,8 +30,8 @@ export class DonationRequestController {
 
   @POST("/")
   @UseDTO(CreateRequestDto)
-  async create(req: Request<{}, {}, CreateReqBody>, res: Response) {
-    const item = await this.drService.createRequest(req.body, req.user);
+  async create(req: Request, res: Response) {
+    const item = await this.drService.create(req.body, req.user);
 
     return res.status(201).json({
       message:
@@ -62,9 +42,7 @@ export class DonationRequestController {
 
   @GET("/:id")
   async single(req: Request<{ id: string }>, res: Response) {
-    const single = await this.drService.findUnique({
-      id: req.params.id,
-    });
+    const single = await this.drService.single(req.params.id);
 
     return res.status(200).json({
       message: "Request was successful!",
@@ -118,10 +96,13 @@ export class DonationRequestController {
   @PUT("/assign/:id")
   @Use(AuthMiddleware.isAdmin)
   @UseDTO(AssignDonorDto)
-  async assign(req: Request<{ id: string }, {}, AssignReqBody>, res: Response) {
+  async assign(
+    req: Request<{ id: string }, {}, AssignDonorDto>,
+    res: Response
+  ) {
     const donorData = await this.drService.assign(
       req.params.id,
-      req.body.donor,
+      req.body.donorId,
       req.user
     );
 
@@ -156,7 +137,7 @@ export class DonationRequestController {
   @POST("/find-donor")
   @Use(AuthMiddleware.isAdmin)
   @UseDTO(FinderDonorDto)
-  async findDonor(req: Request<{}, {}, FindReqBody>, res: Response) {
+  async findDonor(req: Request<{}, {}, FinderDonorDto>, res: Response) {
     const { date, blood } = req.body;
     const donors = await this.drService.findAvailableDonors(blood, date);
 
@@ -169,7 +150,7 @@ export class DonationRequestController {
   @GET("/contribution/:username")
   @Use(AuthMiddleware.isAdmin)
   async userContribution(req: Request<{ username: string }>, res: Response) {
-    const stats = await this.drService.getUserContributionStats(
+    const stats = await this.drService.userContributionStats(
       req.params.username
     );
 
@@ -178,9 +159,4 @@ export class DonationRequestController {
       data: stats,
     });
   }
-}
-
-interface FindReqBody {
-  blood: blood_type;
-  date: string;
 }

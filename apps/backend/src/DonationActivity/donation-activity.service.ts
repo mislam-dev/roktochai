@@ -9,7 +9,7 @@ export class DonationActivityService {
     private readonly da: Prisma.DonationActivityDelegate
   ) {}
 
-  create(data: Prisma.DonationActivityCreateInput) {
+  create(data: Prisma.DonationActivityUncheckedCreateInput) {
     return this.da.create({
       data,
     });

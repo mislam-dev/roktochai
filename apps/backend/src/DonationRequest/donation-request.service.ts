@@ -1,15 +1,22 @@
 import { blood_type, Prisma } from "@prisma/client";
 import { endOfMonth, startOfMonth } from "date-fns";
+import { inject, injectable } from "tsyringe";
 import { prisma } from "../core/database";
+import { DB_DONATION_REQUESTED_TOKEN } from "../core/database/token";
 import { NotFoundException } from "../core/errors";
 import {
   createActivity,
   generateDonationActivityMessage,
 } from "../DonationActivity/donationActivityFunction";
+import { DonationActivityBuilder } from "../DonationActivity/helpers/DonationActivityBuilder";
+import { CreateRequestDto } from "./dtos/create.dto";
 
+@injectable()
 export class DonationRequestService {
   constructor(
-    private readonly dr: Prisma.DonationRequestedDelegate = prisma.donationRequested
+    @inject(DB_DONATION_REQUESTED_TOKEN)
+    private readonly dr: Prisma.DonationRequestedDelegate,
+    private readonly daBuilder: DonationActivityBuilder
   ) {}
 
   findAll(role: string, userId: string) {
@@ -25,6 +32,77 @@ export class DonationRequestService {
         createdAt: "desc",
       },
     });
+  }
+
+  async create(data: CreateRequestDto, user: any) {
+    const { firstName, lastName, address, blood } = data;
+
+    // 1. Create the Donation Request
+    const item = await this.dr.create({
+      data: {
+        ...data,
+        status: "request",
+      },
+    });
+
+    // 2. Log Activities
+    await createActivity({
+      type: "request",
+      message: generateDonationActivityMessage.request(
+        `${firstName} ${lastName}`,
+        blood,
+        address
+      ),
+      userId: user?.id,
+      requestedId: item.id,
+    });
+
+    if (user) {
+      await createActivity({
+        type: "approve",
+        message: `A request was automatically approved for ${firstName} ${lastName}`,
+        userId: user.id,
+        requestedId: item.id,
+      });
+    }
+
+    // 3. Handle Notifications
+    const admins = await prisma.user.findMany({
+      where: {
+        role: { OR: [{ role: "admin" }, { role: "super_admin" }] },
+      },
+      select: { id: true },
+    });
+
+    const authUserId = user?.id;
+    const adminMessage = user
+      ? `${firstName} ${lastName} request a blood of ${blood} is approved automatically!`
+      : `${firstName} ${lastName} request a blood of ${blood}. Approval required!`;
+
+    const userMessage = user
+      ? `Your request is approved! We will keep you updated!`
+      : `We have received your request for ${blood} blood. We will keep you updated!`;
+
+    await prisma.notification.createMany({
+      data: [
+        ...admins.map((admin) => ({
+          message: adminMessage,
+          createdById: authUserId,
+          receiverId: admin.id,
+        })),
+        {
+          message: userMessage,
+          createdById: authUserId,
+          receiverId: authUserId,
+        },
+      ].filter((n) => n.receiverId), // Ensure we don't try to notify a null user
+    });
+
+    return item;
+  }
+
+  single(id: string) {
+    return this.findUnique({ id });
   }
 
   async approve(id: string, user: any) {
@@ -380,7 +458,7 @@ export class DonationRequestService {
     });
   }
 
-  async getUserContributionStats(username: string) {
+  async userContributionStats(username: string) {
     const startOfCurrentMonth = startOfMonth(new Date());
     const endOfCurrentMonth = endOfMonth(new Date());
 
@@ -419,6 +497,7 @@ export class DonationRequestService {
       },
     };
   }
+
   findOne(options: Prisma.DonationRequestedWhereInput) {
     return this.dr.findFirst({
       where: options,
@@ -428,82 +507,6 @@ export class DonationRequestService {
     return this.dr.findFirst({
       where: options,
     });
-  }
-
-  async createRequest(data: any, user: any) {
-    const { firstName, lastName, email, phone, address, date, blood, reason } =
-      data;
-
-    // 1. Create the Donation Request
-    const item = await this.dr.create({
-      data: {
-        address,
-        blood,
-        date,
-        email: email || null,
-        status: user ? "progress" : "request",
-        firstName,
-        lastName,
-        phone,
-        reason,
-        requestedById: user?.id || null,
-      },
-    });
-
-    // 2. Log Activities
-    await createActivity({
-      type: "request",
-      message: generateDonationActivityMessage.request(
-        `${firstName} ${lastName}`,
-        blood,
-        address
-      ),
-      userId: user?.id,
-      requestedId: item.id,
-    });
-
-    if (user) {
-      await createActivity({
-        type: "approve",
-        message: `A request was automatically approved for ${firstName} ${lastName}`,
-        userId: user.id,
-        requestedId: item.id,
-      });
-    }
-
-    // 3. Handle Notifications
-    const admins = await prisma.user.findMany({
-      where: {
-        role: { OR: [{ role: "admin" }, { role: "super_admin" }] },
-      },
-      select: { id: true },
-    });
-
-    const authUserId = user?.id;
-    const adminMessage = user
-      ? `${firstName} ${lastName} request a blood of ${blood} is approved automatically!`
-      : `${firstName} ${lastName} request a blood of ${blood}. Approval required!`;
-
-    const userMessage = user
-      ? `Your request is approved! We will keep you updated!`
-      : `We have received your request for ${blood} blood. We will keep you updated!`;
-
-    await prisma.notification.createMany({
-      data: [
-        ...admins.map((admin) => ({
-          message: adminMessage,
-          createdById: authUserId,
-          receiverId: admin.id,
-        })),
-        {
-          message: userMessage,
-          createdById: authUserId,
-          receiverId: authUserId,
-        },
-      ].filter((n) => n.receiverId), // Ensure we don't try to notify a null user
-    });
-
-    return item;
   }
 
   update(

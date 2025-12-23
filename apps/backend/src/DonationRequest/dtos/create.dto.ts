@@ -1,3 +1,4 @@
+import { blood_type } from "@prisma/client";
 import {
   IsEmail,
   IsNotEmpty,
@@ -50,8 +51,11 @@ export class CreateRequestDto {
   address!: string;
 
   @IsNotEmpty({ message: "Blood is required!" })
-  blood!: string;
+  blood!: blood_type;
 
   @IsNotEmpty({ message: "Reason is required!" })
   reason!: string;
+
+  @IsNotEmpty({ message: "Date is required!" })
+  date!: string;
 }
