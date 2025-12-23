@@ -4,9 +4,7 @@ import { Controller } from "../core/decorator/controller.decorator";
 import { UseDTO } from "../core/decorator/dto.decorator";
 import { Use } from "../core/decorator/middleware.decorator";
 import { GET, POST, PUT } from "../core/decorator/routes.decorator";
-import { NotFoundException } from "../core/errors";
 import { CreateUserDto } from "../user/dtos/create-user.dto";
-import { UserService } from "../user/user.service";
 import { AuthMiddleware } from "./auth.middleware";
 import { AuthService } from "./auth.service";
 import { RecoverAccountDto } from "./dtos/recover-account.dto";
@@ -25,10 +23,7 @@ interface UpdatePasswordRequestBody {
 @autoInjectable()
 @Controller("/api/v1/auth")
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly userService: UserService
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @POST("/sign-in")
   @UseDTO(SignInDto)
@@ -92,8 +87,8 @@ export class AuthController {
   async me(req: Request, res: Response) {
     const user: any = req.user;
 
-    const userData = await this.userService.findOne({ id: user.id });
-    if (!userData) throw new NotFoundException();
+    const userData = await this.authService.me(user.id);
+
     return res.status(200).json({
       message: "User found!",
       data: userData,

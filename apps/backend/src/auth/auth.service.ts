@@ -80,6 +80,7 @@ export class AuthService {
 
   async me(userId: string) {
     const userData = await this.userService.findOne({ id: userId });
+    if (!userData) throw new NotFoundException();
     return userData;
   }
 
